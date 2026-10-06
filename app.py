@@ -10,7 +10,7 @@ from datetime import datetime
 st.set_page_config(page_title="Fabrication Shop ERP", layout="wide", page_icon="🏭")
 
 # ==========================================
-# DATABASE SETUP & MIGRATION (FIXES KEYERROR)
+# DATABASE SETUP & MIGRATION (FIXES CRASHES)
 # ==========================================
 DB_FILE = "shop_erp_data.json"
 
@@ -32,31 +32,24 @@ def migrate_db(db):
     """Ensures old database files have the new required keys."""
     default = get_default_db()
     
-    # Check top level keys
     for key in default.keys():
-        if key not in db:
-            db[key] = default[key]
+        if key not in db: db[key] = default[key]
             
-    # Check inventory keys
     if "inventory" not in db: db["inventory"] = default["inventory"]
     for key in default["inventory"].keys():
-        if key not in db["inventory"]:
-            db["inventory"][key] = default["inventory"][key]
+        if key not in db["inventory"]: db["inventory"][key] = default["inventory"][key]
             
-    # Check projects keys
     if "projects" not in db: db["projects"] = default["projects"]
     for proj in db["projects"].values():
         for key in ["glass", "aluminum", "accessories"]:
-            if key not in proj:
-                proj[key] = []
+            if key not in proj: proj[key] = []
     return db
 
 def load_db():
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r") as f: 
-                db = json.load(f)
-                return migrate_db(db) # Fixes the KeyError
+                return migrate_db(json.load(f))
         except: 
             return get_default_db()
     return get_default_db()
@@ -137,7 +130,14 @@ st.sidebar.download_button("Download Backup (.json)", db_json, "shop_erp_backup.
 # ==========================================
 # MAIN TABS
 # ==========================================
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["🪟 Cut Glass", "📏 Use Aluminum", "🔧 Use Accessories", "📦 Receive Stock", "📊 Project Report"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "🪟 Cut Glass", 
+    "📏 Use Aluminum", 
+    "🔧 Use Accessories", 
+    "📦 Receive Stock", 
+    "📊 Project Report",
+    "📋 Stock View"  # NEW TAB
+])
 
 # --- TAB 1: GLASS CUTTING ---
 with tab1:
@@ -164,12 +164,10 @@ with tab1:
                 mat_df = edited_df[edited_df['Material'] == material]
                 packer = newPacker(rotation=True)
                 
-                # 1. ADD REMNANTS FIRST
                 for rem in db['inventory'].get('remnants', []):
                     if rem['material'] == material:
                         packer.add_bin(rem['width'] - edge_trim, rem['height'] - edge_trim, bid=f"REMNANT | {rem['width']}x{rem['height']}")
 
-                # 2. ADD STANDARD SHEETS
                 if material in db['inventory']['glass']:
                     for sheet_name, dims in stock_options.items():
                         w, h = dims
@@ -191,7 +189,6 @@ with tab1:
                         if "REMNANT" in abin.bid:
                             rem_w = int(abin.bid.split("|")[1].strip().split("x")[0])
                             rem_h = int(abin.bid.split("|")[1].strip().split("x")[1])
-                            # Remove the used remnant
                             db['inventory']['remnants'] = [r for r in db['inventory']['remnants'] if not (r['material'] == material and r['width'] == rem_w and r['height'] == rem_h)]
                         else:
                             sheet_type = abin.bid.split(" | ")[1]
@@ -207,7 +204,6 @@ with tab1:
             st.session_state.generated_bins = all_valid_bins
             st.session_state.current_material = materials[0] if len(materials) > 0 else ""
 
-    # --- RENDER THE CUTTING MAPS & OFFCUT LOGGER ---
     if 'generated_bins' in st.session_state and st.session_state.generated_bins:
         st.success("✅ Cutting Plan Generated! Review and log offcuts below.")
         
@@ -326,7 +322,6 @@ with tab4:
 
         st.markdown("---")
         st.subheader("✂️ Add an Offcut / Remnant")
-        st.write("If you have a large leftover piece, add it here so the software uses it next time.")
         r_mat = st.selectbox("Remnant Material", list(db['inventory']['glass'].keys()) if db['inventory']['glass'] else ["6mm Clear"])
         r_width = st.number_input("Remnant Width (mm)", min_value=100, step=10)
         r_height = st.number_input("Remnant Height (mm)", min_value=100, step=10)
@@ -397,3 +392,38 @@ with tab5:
     st.subheader("🔧 Accessories Usage Log")
     if proj_data['accessories']: st.dataframe(pd.DataFrame(proj_data['accessories']), width='stretch')
     else: st.write("No accessories logged yet.")
+
+# --- TAB 6: FULL STOCK VIEW ---
+with tab6:
+    st.header("📋 Full Warehouse Stock View")
+    st.write("Here is a detailed list of all materials currently in your warehouse.")
+
+    st.subheader("🪟 Glass Sheets")
+    if db['inventory']['glass']:
+        glass_list = []
+        for mat, sizes in db['inventory']['glass'].items():
+            for size, qty in sizes.items():
+                glass_list.append({"Material": mat, "Sheet Size": size, "Quantity in Stock": qty})
+        st.dataframe(pd.DataFrame(glass_list), width='stretch')
+    else:
+        st.info("No glass sheets currently in stock. Go to 'Receive Stock' to add.")
+
+    st.subheader("✂️ Remnants (Offcuts)")
+    if db['inventory'].get('remnants'):
+        st.dataframe(pd.DataFrame(db['inventory']['remnants']), width='stretch')
+    else:
+        st.info("No offcuts currently tracked.")
+
+    st.subheader("📏 Aluminum Profiles")
+    if db['inventory']['aluminum']:
+        alum_list = [{"Profile Name": k, "Total Meters": v} for k, v in db['inventory']['aluminum'].items()]
+        st.dataframe(pd.DataFrame(alum_list), width='stretch')
+    else:
+        st.info("No aluminum profiles currently in stock.")
+
+    st.subheader("🔧 Accessories")
+    if db['inventory']['accessories']:
+        acc_list = [{"Item Name": k, "Quantity": v} for k, v in db['inventory']['accessories'].items()]
+        st.dataframe(pd.DataFrame(acc_list), width='stretch')
+    else:
+        st.info("No accessories currently in stock.")
