@@ -10,7 +10,7 @@ from datetime import datetime
 st.set_page_config(page_title="Fabrication Shop ERP", layout="wide", page_icon="🏭")
 
 # ==========================================
-# DATABASE SETUP (JSON)
+# DATABASE SETUP & MIGRATION (FIXES KEYERROR)
 # ==========================================
 DB_FILE = "shop_erp_data.json"
 
@@ -28,11 +28,37 @@ def get_default_db():
         }
     }
 
+def migrate_db(db):
+    """Ensures old database files have the new required keys."""
+    default = get_default_db()
+    
+    # Check top level keys
+    for key in default.keys():
+        if key not in db:
+            db[key] = default[key]
+            
+    # Check inventory keys
+    if "inventory" not in db: db["inventory"] = default["inventory"]
+    for key in default["inventory"].keys():
+        if key not in db["inventory"]:
+            db["inventory"][key] = default["inventory"][key]
+            
+    # Check projects keys
+    if "projects" not in db: db["projects"] = default["projects"]
+    for proj in db["projects"].values():
+        for key in ["glass", "aluminum", "accessories"]:
+            if key not in proj:
+                proj[key] = []
+    return db
+
 def load_db():
     if os.path.exists(DB_FILE):
         try:
-            with open(DB_FILE, "r") as f: return json.load(f)
-        except: return get_default_db()
+            with open(DB_FILE, "r") as f: 
+                db = json.load(f)
+                return migrate_db(db) # Fixes the KeyError
+        except: 
+            return get_default_db()
     return get_default_db()
 
 def save_db(db):
@@ -165,6 +191,7 @@ with tab1:
                         if "REMNANT" in abin.bid:
                             rem_w = int(abin.bid.split("|")[1].strip().split("x")[0])
                             rem_h = int(abin.bid.split("|")[1].strip().split("x")[1])
+                            # Remove the used remnant
                             db['inventory']['remnants'] = [r for r in db['inventory']['remnants'] if not (r['material'] == material and r['width'] == rem_w and r['height'] == rem_h)]
                         else:
                             sheet_type = abin.bid.split(" | ")[1]
@@ -177,7 +204,6 @@ with tab1:
                     save_db(db)
                     all_valid_bins.extend(valid_bins)
             
-            # Save the generated bins to session state so they don't disappear on button click
             st.session_state.generated_bins = all_valid_bins
             st.session_state.current_material = materials[0] if len(materials) > 0 else ""
 
@@ -215,15 +241,11 @@ with tab1:
             
             with col_actions:
                 st.write("**Offcut Manager**")
-                # Calculate the largest rectangular offcut
-                # Top strip vs Right strip
                 top_w = abin.width
                 top_h = abin.height - max_y
-                
                 right_w = abin.width - max_x
                 right_h = abin.height
                 
-                # Choose the larger offcut area
                 if (top_w * top_h) >= (right_w * right_h):
                     best_offcut = (int(top_w), int(top_h), "Top Strip")
                 else:
@@ -231,15 +253,12 @@ with tab1:
                 
                 st.write(f"Largest Leftover: **{best_offcut[0]} x {best_offcut[1]} mm** ({best_offcut[2]})")
                 
-                # Ask if it was cut
                 cut_confirm = st.checkbox("Did you cut this sheet?", key=f"cut_{i}")
                 
                 if cut_confirm:
                     if st.button("Log Offcut to Inventory", key=f"log_{i}"):
-                        # Extract material from bid (e.g., "6mm Clear | 2140 x 3660")
                         mat_name = abin.bid.split(" | ")[0]
                         
-                        # Only log if it's larger than 300x300mm (otherwise it's trash)
                         if best_offcut[0] > 300 and best_offcut[1] > 300:
                             db['inventory']['remnants'].append({
                                 "material": mat_name,
