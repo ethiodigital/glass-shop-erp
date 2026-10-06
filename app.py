@@ -10,7 +10,7 @@ from datetime import datetime
 st.set_page_config(page_title="Fabrication Shop ERP", layout="wide", page_icon="🏭")
 
 # ==========================================
-# DATABASE SETUP
+# DATABASE SETUP (JSON)
 # ==========================================
 DB_FILE = "shop_erp_data.json"
 
@@ -60,21 +60,26 @@ with col1:
 
 with col2:
     with st.popover("➕ New Project"):
-        new_proj_name = st.text_input("Project Name")
+        new_proj_name = st.text_input("Project Name (e.g., Villa 4)")
         if st.button("Create"):
             if new_proj_name and new_proj_name not in db['projects']:
                 db['projects'][new_proj_name] = {"glass": [], "aluminum": [], "accessories": []}
                 db['active_project'] = new_proj_name
                 save_db(db)
+                st.success(f"Project '{new_proj_name}' created!")
                 st.rerun()
+            elif new_proj_name in db['projects']:
+                st.error("Project already exists.")
 
 st.info(f"🟢 Active Project: **{db['active_project']}**")
 
 # ==========================================
-# SIDEBAR
+# SIDEBAR: LIVE WAREHOUSE INVENTORY
 # ==========================================
 st.sidebar.header("📦 Live Inventory")
+
 st.sidebar.subheader("🪟 Glass Sheets")
+if not db['inventory']['glass']: st.sidebar.write("No glass stock added.")
 for mat, sizes in db['inventory']['glass'].items():
     st.sidebar.write(f"**{mat}**")
     for size, qty in sizes.items():
@@ -86,11 +91,22 @@ if not db['inventory'].get('remnants'): st.sidebar.write("No offcuts tracked.")
 for rem in db['inventory'].get('remnants', []):
     st.sidebar.markdown(f"- {rem['material']}: {rem['width']}x{rem['height']}")
 
-st.sidebar.subheader("📏 Aluminum & 🔧 Accessories")
-st.sidebar.write("View in tabs below.")
+st.sidebar.subheader("📏 Aluminum Profiles")
+if not db['inventory']['aluminum']: st.sidebar.write("No aluminum stock added.")
+for profile, meters in db['inventory']['aluminum'].items():
+    color = "red" if meters <= 10 else "black"
+    st.sidebar.markdown(f"<span style='color:{color}'>**{profile}**: {meters:.1f} m</span>", unsafe_allow_html=True)
+
+st.sidebar.subheader("🔧 Accessories")
+if not db['inventory']['accessories']: st.sidebar.write("No accessories added.")
+for item, qty in db['inventory']['accessories'].items():
+    color = "red" if qty <= 5 else "black"
+    st.sidebar.markdown(f"<span style='color:{color}'>**{item}**: {qty}</span>", unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.download_button("💾 Backup Data (.json)", json.dumps(db, indent=4), "shop_backup.json", "application/json")
+st.sidebar.subheader("💾 Data Backup")
+db_json = json.dumps(db, indent=4)
+st.sidebar.download_button("Download Backup (.json)", db_json, "shop_erp_backup.json", "application/json")
 
 # ==========================================
 # MAIN TABS
@@ -109,7 +125,7 @@ with tab1:
     if 'glass_data' not in st.session_state:
         st.session_state.glass_data = pd.DataFrame([{"Location": "Door 1", "Material": "", "Width": 0, "Height": 0, "Quantity": 0}])
 
-    edited_df = st.data_editor(st.session_state.glass_data, num_rows="dynamic", use_container_width=True)
+    edited_df = st.data_editor(st.session_state.glass_data, num_rows="dynamic", width='stretch')
 
     if st.button("🚀 Generate Cutting Plan", type="primary"):
         if edited_df.empty or edited_df['Material'].iloc[0] == "":
@@ -236,3 +252,129 @@ with tab1:
                             st.info("Offcut is too small to keep (< 300mm). Discarded.")
             
             st.markdown("---")
+
+# --- TAB 2: ALUMINUM USAGE ---
+with tab2:
+    st.header("Use Aluminum Profile")
+    if not db['inventory']['aluminum']: st.warning("No aluminum in stock.")
+    else:
+        with st.form("aluminum_form"):
+            profile = st.selectbox("Select Profile", list(db['inventory']['aluminum'].keys()))
+            meters_used = st.number_input("Total Meters Used (m)", min_value=0.1, step=0.1)
+            if st.form_submit_button("📉 Deduct & Log"):
+                if db['inventory']['aluminum'][profile] >= meters_used:
+                    db['inventory']['aluminum'][profile] -= meters_used
+                    db['projects'][db['active_project']]['aluminum'].append({"Profile": profile, "Meters": meters_used, "Date": datetime.now().strftime("%Y-%m-%d")})
+                    save_db(db)
+                    st.success(f"✅ Logged {meters_used}m of {profile}.")
+                else: st.error(f"❌ Not enough stock! Only {db['inventory']['aluminum'][profile]:.1f}m available.")
+
+# --- TAB 3: ACCESSORIES USAGE ---
+with tab3:
+    st.header("Use Accessories")
+    if not db['inventory']['accessories']: st.warning("No accessories in stock.")
+    else:
+        with st.form("accessories_form"):
+            item = st.selectbox("Select Accessory", list(db['inventory']['accessories'].keys()))
+            qty_used = st.number_input("Quantity Used", min_value=1, step=1)
+            if st.form_submit_button("📉 Deduct & Log"):
+                if db['inventory']['accessories'][item] >= qty_used:
+                    db['inventory']['accessories'][item] -= qty_used
+                    db['projects'][db['active_project']]['accessories'].append({"Item": item, "Qty": qty_used, "Date": datetime.now().strftime("%Y-%m-%d")})
+                    save_db(db)
+                    st.success(f"✅ Logged {qty_used} x {item}.")
+                else: st.error(f"❌ Not enough stock! Only {db['inventory']['accessories'][item]} available.")
+
+# --- TAB 4: RECEIVE STOCK ---
+with tab4:
+    st.header("📦 Receive Stock (Warehouse)")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("🪟 Add Glass Sheets")
+        g_mat = st.text_input("Material Name (e.g., 6mm Clear)")
+        g_size = st.selectbox("Sheet Size", ["2140 x 3300", "2140 x 3660"])
+        g_qty = st.number_input("Quantity (Sheets)", min_value=1, step=1)
+        if st.button("Add Glass to Stock"):
+            if g_mat:
+                if g_mat not in db['inventory']['glass']: db['inventory']['glass'][g_mat] = {"2140 x 3300": 0, "2140 x 3660": 0}
+                db['inventory']['glass'][g_mat][g_size] += g_qty
+                save_db(db)
+                st.success(f"Added {g_qty} sheets of {g_mat}")
+                st.rerun()
+            else: st.error("Please enter a material name.")
+
+        st.markdown("---")
+        st.subheader("✂️ Add an Offcut / Remnant")
+        st.write("If you have a large leftover piece, add it here so the software uses it next time.")
+        r_mat = st.selectbox("Remnant Material", list(db['inventory']['glass'].keys()) if db['inventory']['glass'] else ["6mm Clear"])
+        r_width = st.number_input("Remnant Width (mm)", min_value=100, step=10)
+        r_height = st.number_input("Remnant Height (mm)", min_value=100, step=10)
+        if st.button("Add Remnant to Stock"):
+            db['inventory']['remnants'].append({"material": r_mat, "width": r_width, "height": r_height})
+            save_db(db)
+            st.success(f"Added remnant {r_width}x{r_height} of {r_mat}")
+            st.rerun()
+
+    with col2:
+        st.subheader("📏 Add Aluminum")
+        a_prof = st.text_input("Profile Name (e.g., 60mm Frame)")
+        a_meters = st.number_input("Total Meters Received", min_value=1.0, step=1.0)
+        if st.button("Add Aluminum to Stock"):
+            if a_prof:
+                if a_prof in db['inventory']['aluminum']: db['inventory']['aluminum'][a_prof] += a_meters
+                else: db['inventory']['aluminum'][a_prof] = a_meters
+                save_db(db)
+                st.success(f"Added {a_meters}m of {a_prof}")
+                st.rerun()
+            else: st.error("Please enter a profile name.")
+
+        st.markdown("---")
+        st.subheader("🔧 Add Accessories")
+        acc_item = st.text_input("Accessory Name (e.g., Door Handles)")
+        acc_qty = st.number_input("Quantity Received", min_value=1, step=1)
+        if st.button("Add Accessory to Stock"):
+            if acc_item:
+                if acc_item in db['inventory']['accessories']: db['inventory']['accessories'][acc_item] += acc_qty
+                else: db['inventory']['accessories'][acc_item] = acc_qty
+                save_db(db)
+                st.success(f"Added {acc_qty} of {acc_item}")
+                st.rerun()
+            else: st.error("Please enter an accessory name.")
+
+# --- TAB 5: PROJECT DASHBOARD ---
+with tab5:
+    st.header(f"📊 Project Report: {db['active_project']}")
+    proj_data = db['projects'][db['active_project']]
+    
+    col1, col2, col3 = st.columns(3)
+    with col1: st.metric("Glass Pieces Cut", len(proj_data['glass']))
+    with col2: 
+        total_alum = sum(item['Meters'] for item in proj_data['aluminum'])
+        st.metric("Aluminum Used", f"{total_alum:.1f} m")
+    with col3: 
+        total_acc = sum(item['Qty'] for item in proj_data['accessories'])
+        st.metric("Accessories Used", total_acc)
+
+    st.markdown("---")
+    if st.button("📥 Export Project Report (CSV)"):
+        export_data = []
+        for g in proj_data['glass']: export_data.append({"Category": "Glass", "Item": f"{g['Material']} - {g['Size']}", "Qty/Meters": 1, "Location": g['Location']})
+        for a in proj_data['aluminum']: export_data.append({"Category": "Aluminum", "Item": a['Profile'], "Qty/Meters": a['Meters'], "Location": ""})
+        for ac in proj_data['accessories']: export_data.append({"Category": "Accessory", "Item": ac['Item'], "Qty/Meters": ac['Qty'], "Location": ""})
+        df_export = pd.DataFrame(export_data)
+        csv = df_export.to_csv(index=False).encode('utf-8')
+        st.download_button("Download CSV", csv, f"{db['active_project']}_Report.csv", "text/csv")
+
+    st.subheader("🪟 Glass Cut Log")
+    if proj_data['glass']: st.dataframe(pd.DataFrame(proj_data['glass']), width='stretch')
+    else: st.write("No glass logged yet.")
+
+    st.subheader("📏 Aluminum Usage Log")
+    if proj_data['aluminum']: st.dataframe(pd.DataFrame(proj_data['aluminum']), width='stretch')
+    else: st.write("No aluminum logged yet.")
+
+    st.subheader("🔧 Accessories Usage Log")
+    if proj_data['accessories']: st.dataframe(pd.DataFrame(proj_data['accessories']), width='stretch')
+    else: st.write("No accessories logged yet.")
