@@ -24,7 +24,9 @@
         "aluminum": {
             "Pp": 20.0
         },
-        "accessories": {}
+        "accessories": {
+            "Lock": 5
+        }
     },
     "projects": {},
     "recent": {
@@ -34,6 +36,8 @@
         "aluminum": [
             "Pp"
         ],
-        "accessories": []
+        "accessories": [
+            "Lock"
+        ]
     }
 }
