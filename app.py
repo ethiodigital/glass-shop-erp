@@ -11,7 +11,7 @@ import io
 import zipfile
 from urllib.parse import quote
 from PIL import Image
-from github import Github, GithubException
+from github import Github, GithubException, Auth
 
 # ═══════════════════════════════════════════════════════════════
 # CONFIG & GLOBAL STYLES
@@ -36,7 +36,6 @@ st.markdown("""
     --bg-soft: #F7F9FC;
 }
 
-/* ---------- LARGER, TOUCH-FRIENDLY CONTROLS ---------- */
 .stButton > button,
 .stDownloadButton > button,
 .stFormSubmitButton > button,
@@ -64,7 +63,6 @@ input, textarea, select {
 [data-testid="stMetricValue"] { font-size: 26px !important; }
 [data-testid="stMetricLabel"] { font-size: 13px !important; }
 
-/* ---------- TABS — CLEANER, BIGGER ---------- */
 .stTabs [data-baseweb="tab-list"] {
     gap: 6px;
     padding: 4px 0;
@@ -79,7 +77,6 @@ input, textarea, select {
     font-weight: 600 !important;
 }
 
-/* ---------- BRAND HEADER ---------- */
 .brand-header {
     background: linear-gradient(135deg, var(--brand-dark), var(--brand));
     color: white;
@@ -115,7 +112,6 @@ input, textarea, select {
     opacity: 0.9;
 }
 
-/* ---------- PROJECT BANNER (inside Jobs) ---------- */
 .project-banner {
     background: white;
     border: 2px solid var(--brand-light);
@@ -160,7 +156,6 @@ input, textarea, select {
 .project-stats .stat b { font-size: 18px; }
 .project-stats .stat .icon { font-size: 20px; }
 
-/* ---------- STATUS PILL ---------- */
 .status-pill {
     padding: 8px 18px;
     border-radius: 24px;
@@ -172,7 +167,6 @@ input, textarea, select {
 .status-ongoing { background: #FEF3C7; color: #92400E; }
 .status-completed { background: #D1FAE5; color: #065F46; }
 
-/* ---------- CARDS ---------- */
 .big-card {
     background: white;
     border: 2px solid #E5E7EB;
@@ -191,10 +185,7 @@ input, textarea, select {
 .big-card.red { border-color: #FECACA; background: #FEF2F2; }
 .big-card.green { border-color: #A7F3D0; background: #F0FDF4; }
 
-/* ---------- NAV MENU (sidebar) ---------- */
-section[data-testid="stSidebar"] .stRadio > div {
-    gap: 6px !important;
-}
+section[data-testid="stSidebar"] .stRadio > div { gap: 6px !important; }
 section[data-testid="stSidebar"] .stRadio label {
     font-size: 17px !important;
     padding: 14px 16px !important;
@@ -210,7 +201,6 @@ section[data-testid="stSidebar"] .stRadio label:hover {
     background: var(--brand-light);
 }
 
-/* ---------- SECTION TITLE ---------- */
 .section-title {
     font-size: 18px;
     font-weight: 800;
@@ -219,7 +209,6 @@ section[data-testid="stSidebar"] .stRadio label:hover {
     letter-spacing: 0.2px;
 }
 
-/* ---------- EMPTY STATE ---------- */
 .empty-state {
     text-align: center;
     padding: 46px 24px;
@@ -232,7 +221,6 @@ section[data-testid="stSidebar"] .stRadio label:hover {
 .empty-state .icon { font-size: 56px; margin-bottom: 12px; }
 .empty-state .msg { font-size: 16px; font-weight: 500; }
 
-/* ---------- FEATURE TOGGLE CARD ---------- */
 .feature-row {
     display: flex;
     justify-content: space-between;
@@ -247,7 +235,6 @@ section[data-testid="stSidebar"] .stRadio label:hover {
 .feature-row .info .name { font-weight: 700; font-size: 15px; color: var(--brand-dark); }
 .feature-row .info .desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
-/* ---------- MOBILE ---------- */
 @media (max-width: 768px) {
     .block-container { padding: 0.5rem 0.9rem !important; }
     h1 { font-size: 26px !important; }
@@ -305,20 +292,14 @@ def migrate_db(db):
     for rem in db["inventory"]["remnants"]:
         if "id" not in rem: rem["id"] = str(uuid.uuid4())[:8]
         if "date_added" not in rem: rem["date_added"] = datetime.now().strftime("%Y-%m-%d")
-    # Migrate old status values to 3-state
     status_map = {
-        "Measured": "Started",
-        "Fabricated": "Ongoing",
-        "Delivered": "Ongoing",
-        "Installed": "Ongoing",
-        "Paid": "Completed",
+        "Measured": "Started", "Fabricated": "Ongoing", "Delivered": "Ongoing",
+        "Installed": "Ongoing", "Paid": "Completed",
     }
     for name, proj in db["projects"].items():
         s = proj.get("status", "Started")
-        if s in status_map:
-            proj["status"] = status_map[s]
-        if "status" not in proj:
-            proj["status"] = "Started"
+        if s in status_map: proj["status"] = status_map[s]
+        if "status" not in proj: proj["status"] = "Started"
         if "created" not in proj: proj["created"] = datetime.now().strftime("%Y-%m-%d")
         if "customer" not in proj: proj["customer"] = {"name": "", "phone": "", "address": ""}
         if "photos" not in proj: proj["photos"] = []
@@ -329,7 +310,8 @@ def migrate_db(db):
 @st.cache_resource
 def get_github_client():
     try:
-        return Github(st.secrets["github"]["token"])
+        token = st.secrets["github"]["token"]
+        return Github(auth=Auth.Token(token))  # ✅ Fixed deprecation
     except Exception:
         return None
 
@@ -444,6 +426,25 @@ def section_title(text):
     st.markdown(f'<div class="section-title">{text}</div>', unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
+# 🆕 NAVIGATION QUEUE (applied BEFORE widget renders)
+# ═══════════════════════════════════════════════════════════════
+NAV_OPTIONS = ["🏠 Dashboard", "📦 Warehouse", "🛠️ Jobs", "📊 Reports", "⚙️ Settings"]
+
+# Apply pending navigation before the radio widget is created
+if "pending_nav" in st.session_state and st.session_state.pending_nav:
+    if st.session_state.pending_nav in NAV_OPTIONS:
+        st.session_state.nav_radio = st.session_state.pending_nav
+    st.session_state.pending_nav = None
+
+# Initialize nav state
+if "nav_radio" not in st.session_state:
+    st.session_state.nav_radio = "🏠 Dashboard"
+
+def goto(page):
+    """Queue navigation to a page (safe to call inside buttons)."""
+    st.session_state.pending_nav = page
+
+# ═══════════════════════════════════════════════════════════════
 # PRINT MODE (early exit)
 # ═══════════════════════════════════════════════════════════════
 if st.session_state.get("print_mode") and st.session_state.get("generated_bins"):
@@ -464,7 +465,7 @@ if st.session_state.get("print_mode") and st.session_state.get("generated_bins")
     st.divider()
     kerf = st.session_state.get("print_kerf", 3)
     for i, abin in enumerate(st.session_state.generated_bins):
-        st.image(render_sheet_png(abin, kerf, f"Sheet {i+1}"), use_column_width=True)
+        st.image(render_sheet_png(abin, kerf, f"Sheet {i+1}"), use_container_width=True)
         st.markdown("---")
     st.stop()
 
@@ -495,13 +496,12 @@ with st.sidebar:
     st.markdown("### 🧭 Navigation")
     nav = st.radio(
         "Navigate",
-        ["🏠 Dashboard", "📦 Warehouse", "🛠️ Jobs", "📊 Reports", "⚙️ Settings"],
+        NAV_OPTIONS,
         label_visibility="collapsed",
-        key="nav"
+        key="nav_radio"
     )
     st.divider()
 
-    # Alerts (compact)
     if feat.get("low_stock_alerts", True):
         alerts = []
         for m, s in db["inventory"]["glass"].items():
@@ -542,7 +542,6 @@ with st.sidebar:
 if nav == "🏠 Dashboard":
     st.markdown("## 🏠 Dashboard")
 
-    # Quick stats
     total_projects = len(db["projects"])
     active_count = sum(1 for p in db["projects"].values() if p.get("status") in ["Started", "Ongoing"])
     completed_count = sum(1 for p in db["projects"].values() if p.get("status") == "Completed")
@@ -561,21 +560,18 @@ if nav == "🏠 Dashboard":
     c3.metric("🔧 Accessory Items", len(db["inventory"]["accessories"]))
 
     st.divider()
-
-    # Quick actions
     section_title("⚡ Quick Actions")
     c1, c2 = st.columns(2)
     with c1:
         if st.button("➕ Create New Job", type="primary", width="stretch"):
-            st.session_state.nav = "🛠️ Jobs"
+            st.session_state.pending_nav = "🛠️ Jobs"
             st.session_state.show_new_project = True
             st.rerun()
     with c2:
         if st.button("📦 Add Stock", width="stretch"):
-            st.session_state.nav = "📦 Warehouse"
+            st.session_state.pending_nav = "📦 Warehouse"
             st.rerun()
 
-    # Recent projects
     section_title("🕒 Recent Jobs")
     if db["projects"]:
         recent = sorted(db["projects"].items(),
@@ -609,7 +605,6 @@ elif nav == "📦 Warehouse":
     with wtab1:
         search = st.text_input("🔍 Search", placeholder="Search materials...")
 
-        # Stale offcuts
         stale = get_stale_offcuts()
         if stale and not search and feat.get("offcut_tracking", True):
             section_title(f"⏰ Stale Offcuts ({len(stale)})")
@@ -761,7 +756,6 @@ elif nav == "📦 Warehouse":
 elif nav == "🛠️ Jobs":
     st.markdown("## 🛠️ Jobs")
 
-    # Show create option first if requested
     if st.session_state.get("show_new_project"):
         with st.expander("➕ Create New Job", expanded=True):
             new_proj = st.text_input("Job Name", placeholder="e.g., Villa 4 - Bole")
@@ -783,7 +777,6 @@ elif nav == "🛠️ Jobs":
                     st.rerun()
         st.divider()
 
-    # Project selector
     project_names = list(db["projects"].keys())
     if not project_names:
         empty_state("🛠️", "No jobs yet.")
@@ -804,7 +797,6 @@ elif nav == "🛠️ Jobs":
     if db["active_project"] not in project_names:
         db["active_project"] = project_names[0]
 
-    # Project selector + create button
     col1, col2 = st.columns([3, 1])
     with col1:
         selected = st.selectbox(
@@ -823,7 +815,6 @@ elif nav == "🛠️ Jobs":
 
     proj = db["projects"][db["active_project"]]
 
-    # ---- Project banner ----
     status = proj.get("status", "Started")
     pill_class = {"Started": "status-started", "Ongoing": "status-ongoing",
                   "Completed": "status-completed"}.get(status, "status-started")
@@ -850,7 +841,6 @@ elif nav == "🛠️ Jobs":
     </div>
     """, unsafe_allow_html=True)
 
-    # ---- Status buttons (3 states) ----
     section_title("📌 Job Status")
     STATUS_OPTIONS = ["Started", "Ongoing", "Completed"]
     cols = st.columns(3)
@@ -865,10 +855,8 @@ elif nav == "🛠️ Jobs":
 
     st.divider()
 
-    # ---- Project tabs ----
     pt1, pt2, pt3, pt4, pt5 = st.tabs(["📋 Info", "🪟 Cut Glass", "📦 Materials", "📸 Photos", "📜 History"])
 
-    # ---- INFO TAB ----
     with pt1:
         section_title("👤 Customer Information")
         cname = st.text_input("Customer Name", value=cust.get("name", ""))
@@ -891,14 +879,12 @@ elif nav == "🛠️ Jobs":
                 db["active_project"] = None
                 save_db(db); st.rerun()
 
-    # ---- CUT GLASS TAB ----
     with pt2:
         if not db["inventory"]["glass"]:
             empty_state("🪟", "No glass in warehouse. Add stock first.")
         else:
             mats = list(db["inventory"]["glass"].keys())
 
-            # Settings (kerf, edge trim)
             with st.expander("⚙️ Cutting Settings"):
                 c1, c2 = st.columns(2)
                 with c1:
@@ -959,7 +945,6 @@ elif nav == "🛠️ Jobs":
                             mdf = df[df["Material"] == material]
                             p = newPacker(rotation=True)
 
-                            # Add offcuts (oldest first) if feature enabled
                             if feat.get("offcut_tracking", True):
                                 mat_remnants = [r for r in db["inventory"].get("remnants", []) if r["material"] == material]
                                 mat_remnants.sort(key=lambda r: r.get("date_added", "9999-99-99"))
@@ -1000,7 +985,6 @@ elif nav == "🛠️ Jobs":
             else:
                 empty_state("📐", "Add pieces above to start cutting.")
 
-            # Cutting maps
             if st.session_state.get("generated_bins"):
                 st.divider()
                 section_title("🗺️ Cutting Plan")
@@ -1014,7 +998,6 @@ elif nav == "🛠️ Jobs":
                     if st.button("✅ Done Cutting", width="stretch"):
                         st.session_state.generated_bins = []; st.rerun()
 
-                # Sharing
                 if feat.get("sharing", True):
                     proj_label = db["active_project"]
                     pieces_summary = " | ".join([f"{g['Location']}:{g['Size']}" for g in proj["glass"][-20:]])
@@ -1026,7 +1009,6 @@ elif nav == "🛠️ Jobs":
                     with c2:
                         st.link_button("✈️ Telegram", f"https://t.me/share/url?url=&text={enc}", width="stretch")
 
-                # Download zip
                 zip_buf = io.BytesIO()
                 with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
                     for i, abin in enumerate(st.session_state.generated_bins):
@@ -1035,11 +1017,10 @@ elif nav == "🛠️ Jobs":
                                     f"{db['active_project']}_CuttingSheets.zip",
                                     "application/zip", width="stretch")
 
-                # Per sheet
                 for i, abin in enumerate(st.session_state.generated_bins):
                     section_title(f"Sheet {i+1}")
                     png = render_sheet_png(abin, kerf, f"Sheet {i+1}")
-                    st.image(png, use_column_width=True)
+                    st.image(png, use_container_width=True)
 
                     c1, c2 = st.columns(2)
                     with c1:
@@ -1052,7 +1033,6 @@ elif nav == "🛠️ Jobs":
                                             f"https://wa.me/?text={quote(f'🪟 Sheet {i+1}')}",
                                             key=f"wa_{i}", width="stretch")
 
-                    # Offcut saving
                     if feat.get("offcut_tracking", True):
                         mx = my = 0
                         for rect in abin:
@@ -1073,7 +1053,6 @@ elif nav == "🛠️ Jobs":
                                     save_db(db); st.success("Saved!")
                     st.divider()
 
-    # ---- MATERIALS TAB ----
     with pt3:
         section_title("📏 Use Aluminum")
         if not db["inventory"]["aluminum"]:
@@ -1112,7 +1091,6 @@ elif nav == "🛠️ Jobs":
                     else:
                         st.error("Not enough.")
 
-    # ---- PHOTOS TAB ----
     with pt4:
         if not feat.get("photos", True):
             st.info("📷 Photo attachments are disabled in Settings.")
@@ -1156,7 +1134,7 @@ elif nav == "🛠️ Jobs":
                     try:
                         st.image(base64.b64decode(photo["data"]),
                                  caption=f"{photo['name']} — {photo['date']}",
-                                 use_column_width=True)
+                                 use_container_width=True)
                     except Exception:
                         st.error("Failed to load.")
                     if st.button("🗑️ Delete", key=f"ph_{i}", width="stretch"):
@@ -1164,7 +1142,6 @@ elif nav == "🛠️ Jobs":
             else:
                 empty_state("📸", "No photos yet.")
 
-    # ---- HISTORY TAB ----
     with pt5:
         section_title("🕒 Full Activity Timeline")
         timeline = []
@@ -1211,7 +1188,6 @@ elif nav == "📊 Reports":
         empty_state("📊", "No jobs yet.")
         st.stop()
 
-    # Customer search
     if feat.get("customer_search", True):
         section_title("🔍 Customer Search")
         search = st.text_input("Search by customer, phone, or address",
@@ -1247,7 +1223,7 @@ elif nav == "📊 Reports":
                 if st.button(f"📋 Open", key=f"open_{name}", width="stretch"):
                     db["active_project"] = name
                     save_db(db, silent=True)
-                    st.session_state.nav = "🛠️ Jobs"
+                    st.session_state.pending_nav = "🛠️ Jobs"
                     st.rerun()
             with c2:
                 if c.get("phone"):
@@ -1256,7 +1232,6 @@ elif nav == "📊 Reports":
                     st.link_button("📱 WhatsApp", f"https://wa.me/{phone}?text={wa_text}",
                                     key=f"w_{name}", width="stretch")
 
-    # All projects summary
     st.divider()
     section_title("📁 All Jobs Overview")
     overview = []
@@ -1296,7 +1271,6 @@ elif nav == "📊 Reports":
 elif nav == "⚙️ Settings":
     st.markdown("## ⚙️ Settings")
 
-    # ---- FEATURES ----
     section_title("🎛️ Features")
 
     def feature_toggle(key, name, desc):
@@ -1319,24 +1293,20 @@ elif nav == "⚙️ Settings":
     feature_toggle("customer_search", "🔍 Customer Search", "Search across all jobs by customer info")
     feature_toggle("auto_save", "💾 Auto-Save to Cloud", "Save every action automatically to GitHub")
 
-    # ---- THRESHOLDS ----
     st.divider()
     section_title("📊 Thresholds")
 
     st.markdown("**Low Stock Warnings**")
     c1, c2, c3 = st.columns(3)
     with c1:
-        new_gs = st.number_input("Glass Sheets",
-                                  min_value=0, max_value=100,
+        new_gs = st.number_input("Glass Sheets", min_value=0, max_value=100,
                                   value=int(db["low_stock_thresholds"]["glass_sheets"]))
     with c2:
-        new_am = st.number_input("Aluminum (m)",
-                                  min_value=0.0, max_value=1000.0,
+        new_am = st.number_input("Aluminum (m)", min_value=0.0, max_value=1000.0,
                                   value=float(db["low_stock_thresholds"]["aluminum_meters"]),
                                   step=1.0)
     with c3:
-        new_ac = st.number_input("Accessories",
-                                  min_value=0, max_value=1000,
+        new_ac = st.number_input("Accessories", min_value=0, max_value=1000,
                                   value=int(db["low_stock_thresholds"]["accessories"]))
 
     if (new_gs != db["low_stock_thresholds"]["glass_sheets"] or
@@ -1349,31 +1319,26 @@ elif nav == "⚙️ Settings":
         }
         save_db(db, silent=True)
 
-    new_warn = st.number_input("⏰ Offcut warning (days)",
-                                min_value=7, max_value=365,
+    new_warn = st.number_input("⏰ Offcut warning (days)", min_value=7, max_value=365,
                                 value=int(db.get("offcut_warning_days", 60)), step=5)
     if new_warn != db.get("offcut_warning_days", 60):
         db["offcut_warning_days"] = new_warn
         save_db(db, silent=True)
 
-    # ---- CUTTING DEFAULTS ----
     st.divider()
     section_title("🔪 Cutting Defaults")
     c1, c2 = st.columns(2)
     with c1:
-        new_kerf = st.number_input("Blade Kerf (mm)",
-                                    min_value=1, max_value=20,
+        new_kerf = st.number_input("Blade Kerf (mm)", min_value=1, max_value=20,
                                     value=int(db["settings"].get("kerf", 3)))
     with c2:
-        new_etrim = st.number_input("Edge Trim (mm)",
-                                     min_value=0, max_value=50,
+        new_etrim = st.number_input("Edge Trim (mm)", min_value=0, max_value=50,
                                      value=int(db["settings"].get("edge_trim", 5)))
     if new_kerf != db["settings"]["kerf"] or new_etrim != db["settings"]["edge_trim"]:
         db["settings"]["kerf"] = new_kerf
         db["settings"]["edge_trim"] = new_etrim
         save_db(db, silent=True)
 
-    # ---- DATA MANAGEMENT ----
     st.divider()
     section_title("💾 Data Management")
 
@@ -1402,6 +1367,6 @@ elif nav == "⚙️ Settings":
     section_title("ℹ️ About")
     st.markdown(f"""
     **Abdiglass and ALM Shop ERP**  
-    Version 2.0 · {datetime.now().strftime('%Y')}  
+    Version 2.1 · {datetime.now().strftime('%Y')}  
     Glass & Aluminum Fabrication Management System
     """)
