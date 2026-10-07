@@ -1,0 +1,20 @@
+{
+    "active_project": null,
+    "low_stock_thresholds": {
+        "glass_sheets": 3,
+        "aluminum_meters": 20.0,
+        "accessories": 5
+    },
+    "inventory": {
+        "glass": {},
+        "remnants": [],
+        "aluminum": {},
+        "accessories": {}
+    },
+    "projects": {},
+    "recent": {
+        "materials": [],
+        "aluminum": [],
+        "accessories": []
+    }
+}
