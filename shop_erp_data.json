@@ -21,7 +21,9 @@
                 "date_added": "2026-10-07"
             }
         ],
-        "aluminum": {},
+        "aluminum": {
+            "Pp": 20.0
+        },
         "accessories": {}
     },
     "projects": {},
@@ -29,7 +31,9 @@
         "materials": [
             "6mm"
         ],
-        "aluminum": [],
+        "aluminum": [
+            "Pp"
+        ],
         "accessories": []
     }
 }
