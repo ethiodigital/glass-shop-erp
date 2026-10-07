@@ -12,7 +12,15 @@
                 "2140 x 3660": 5
             }
         },
-        "remnants": [],
+        "remnants": [
+            {
+                "id": "65f35bea",
+                "material": "6mm",
+                "width": 2100,
+                "height": 1500,
+                "date_added": "2026-10-07"
+            }
+        ],
         "aluminum": {},
         "accessories": {}
     },
