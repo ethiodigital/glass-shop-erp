@@ -1,5 +1,5 @@
 {
-    "active_project": "Bole",
+    "active_project": "Gerji",
     "low_stock_thresholds": {
         "glass_sheets": 3,
         "aluminum_meters": 20.0,
@@ -30,7 +30,7 @@
     },
     "projects": {
         "Bole": {
-            "status": "Fabricated",
+            "status": "Ongoing",
             "created": "2026-10-07",
             "customer": {
                 "name": "Molla",
@@ -90,6 +90,19 @@
             ],
             "aluminum": [],
             "accessories": []
+        },
+        "Gerji": {
+            "status": "Started",
+            "created": "2026-10-07",
+            "customer": {
+                "name": "",
+                "phone": "",
+                "address": ""
+            },
+            "photos": [],
+            "glass": [],
+            "aluminum": [],
+            "accessories": []
         }
     },
     "recent": {
@@ -107,5 +120,15 @@
     "settings": {
         "kerf": 3,
         "edge_trim": 5
+    },
+    "features": {
+        "photos": true,
+        "offcut_tracking": true,
+        "sharing": true,
+        "low_stock_alerts": true,
+        "stale_offcut_alerts": true,
+        "print_mode": true,
+        "customer_search": true,
+        "auto_save": true
     }
 }
