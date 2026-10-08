@@ -16,15 +16,7 @@
                 "2140 x 3660": 0
             }
         },
-        "remnants": [
-            {
-                "id": "98413e18",
-                "material": "6mm Clear",
-                "width": 2135,
-                "height": 442,
-                "date_added": "2026-10-08"
-            }
-        ],
+        "remnants": [],
         "aluminum": {
             "Pp": 20.0
         },
@@ -316,6 +308,12 @@
                     "Material": "6mm Clear",
                     "Size": "1070x2650",
                     "Location": "Panel 5 (Middle)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "2100x400",
+                    "Location": "Unnamed",
                     "Date": "2026-10-08"
                 }
             ],
