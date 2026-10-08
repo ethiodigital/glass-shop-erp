@@ -8,8 +8,8 @@
     "inventory": {
         "glass": {
             "6mm": {
-                "2140 x 3300": 1,
-                "2140 x 3660": 5
+                "2140 x 3300": 0,
+                "2140 x 3660": 0
             }
         },
         "remnants": [],
@@ -128,6 +128,42 @@
                     "Material": "6mm",
                     "Size": "900x2140",
                     "Location": "Unnamed",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x3000",
+                    "Location": "B",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x3000",
+                    "Location": "B",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x3000",
+                    "Location": "B",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x3000",
+                    "Location": "B",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x3000",
+                    "Location": "B",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x3000",
+                    "Location": "B",
                     "Date": "2026-10-08"
                 }
             ],
