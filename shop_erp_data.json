@@ -454,6 +454,19 @@
             "glass": [],
             "aluminum": [],
             "accessories": []
+        },
+        "Bas": {
+            "status": "Started",
+            "created": "2026-10-08",
+            "customer": {
+                "name": "",
+                "phone": "",
+                "address": ""
+            },
+            "photos": [],
+            "glass": [],
+            "aluminum": [],
+            "accessories": []
         }
     },
     "recent": {
