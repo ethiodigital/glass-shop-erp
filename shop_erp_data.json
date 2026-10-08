@@ -6,12 +6,7 @@
         "accessories": 5
     },
     "inventory": {
-        "glass": {
-            "6mm Clear": {
-                "2140 x 3300": 41,
-                "2140 x 3660": 0
-            }
-        },
+        "glass": {},
         "remnants": [],
         "aluminum": {
             "Pp": 20.0
