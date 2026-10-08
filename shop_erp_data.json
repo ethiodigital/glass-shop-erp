@@ -12,7 +12,7 @@
                 "2140 x 3660": 0
             },
             "6mm Clear": {
-                "2140 x 3300": 50,
+                "2140 x 3300": 41,
                 "2140 x 3660": 0
             }
         },
@@ -183,7 +183,134 @@
                 "address": ""
             },
             "photos": [],
-            "glass": [],
+            "glass": [
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x3000",
+                    "Location": "Panel 2 (Top Right)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "690x3000",
+                    "Location": "Panel 5 (Rightmost)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "362x2650",
+                    "Location": "Bottom Right Side Panel (Leftmost)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x3000",
+                    "Location": "Panel 2 (Top Right)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "690x2850",
+                    "Location": "Top Left Panel 1 (Leftmost)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "362x2650",
+                    "Location": "Side Panel (Rightmost)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x3000",
+                    "Location": "Panel 2 (Top Right)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "900x2140",
+                    "Location": "Top Right Opening Glass (Left)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "900x880",
+                    "Location": "Top Fixed Glass (Left)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2850",
+                    "Location": "Panel 2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "900x2140",
+                    "Location": "Bottom Left Opening Glass (Left)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "900x680",
+                    "Location": "Top Fixed Glass (Bottom Left)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2850",
+                    "Location": "Panel 2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "900x2140",
+                    "Location": "Door Left",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2850",
+                    "Location": "Panel 2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "900x2140",
+                    "Location": "Door Right",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2820",
+                    "Location": "Panel 2 (Bottom Left)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "665x2820",
+                    "Location": "Panel 3 (Rightmost)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2650",
+                    "Location": "Panel 2 (Bottom Right)",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1800x510",
+                    "Location": "Top Center Fixed Glass",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2650",
+                    "Location": "Panel 5 (Middle)",
+                    "Date": "2026-10-08"
+                }
+            ],
             "aluminum": [],
             "accessories": []
         }
