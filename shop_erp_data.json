@@ -348,7 +348,7 @@
     },
     "offcut_warning_days": 60,
     "settings": {
-        "kerf": 3,
+        "kerf": 2,
         "edge_trim": 5
     },
     "features": {
