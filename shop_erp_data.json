@@ -8,7 +8,7 @@
     "inventory": {
         "glass": {
             "6mm": {
-                "2140 x 3300": 64,
+                "2140 x 3300": 63,
                 "2140 x 3660": 0
             },
             "6mm Clear": {
@@ -16,15 +16,7 @@
                 "2140 x 3660": 0
             }
         },
-        "remnants": [
-            {
-                "id": "ce020439",
-                "material": "6mm",
-                "width": 2138,
-                "height": 2495,
-                "date_added": "2026-10-08"
-            }
-        ],
+        "remnants": [],
         "aluminum": {
             "Pp": 20.0
         },
@@ -430,6 +422,24 @@
                     "Material": "6mm",
                     "Size": "950x800",
                     "Location": "Cut 17",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x2138",
+                    "Location": "Do2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1070x2138",
+                    "Location": "Do2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "370x2800",
+                    "Location": "Dor",
                     "Date": "2026-10-08"
                 }
             ],
