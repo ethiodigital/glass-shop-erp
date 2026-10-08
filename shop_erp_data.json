@@ -12,7 +12,7 @@
                 "2140 x 3660": 0
             },
             "6mm": {
-                "2140 x 3300": 11,
+                "2140 x 3300": 6,
                 "2140 x 3660": 0
             }
         },
@@ -168,6 +168,114 @@
                     "Material": "6mm",
                     "Size": "1070x3000",
                     "Location": "B",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1375x1205",
+                    "Location": "Cut 8",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1165x1383",
+                    "Location": "Cut 9",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "895x1383",
+                    "Location": "Cut 6",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1325x670",
+                    "Location": "Cut 2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1375x1100",
+                    "Location": "Cut 3",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1380x980",
+                    "Location": "Cut 5",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1380x970",
+                    "Location": "Cut 13",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1380x895",
+                    "Location": "Cut 7",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1370x890",
+                    "Location": "Cut 4",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "890x1335",
+                    "Location": "Cut 1",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "845x1380",
+                    "Location": "Cut 14",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1385x840",
+                    "Location": "Cut 10",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1015x910",
+                    "Location": "Cut 12",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "950x890",
+                    "Location": "Cut 16",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "930x890",
+                    "Location": "Cut 15",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "910x840",
+                    "Location": "Cut 11",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "930x695",
+                    "Location": "Cut 18",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "950x800",
+                    "Location": "Cut 17",
                     "Date": "2026-10-08"
                 }
             ],
