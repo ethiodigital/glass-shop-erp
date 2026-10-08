@@ -324,9 +324,9 @@
             "status": "Started",
             "created": "2026-10-08",
             "customer": {
-                "name": "",
-                "phone": "",
-                "address": ""
+                "name": "Basit",
+                "phone": "0911",
+                "address": "Bole"
             },
             "photos": [],
             "glass": [],
