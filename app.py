@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.backends.backend_pdf import PdfPages
 from rectpack import newPacker
 import json
 from datetime import datetime
@@ -13,242 +14,61 @@ from urllib.parse import quote
 from PIL import Image
 from github import Github, GithubException, Auth
 
-# ═══════════════════════════════════════════════════════════════
-# CONFIG & GLOBAL STYLES
-# ═══════════════════════════════════════════════════════════════
-st.set_page_config(
-    page_title="Abdiglass and ALM Shop ERP",
-    layout="wide",
-    page_icon="🏭",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="Abdiglass and ALM Shop ERP", layout="wide", page_icon="🏭", initial_sidebar_state="collapsed")
 
+# ═══════════════════════════════════════════════════════════════
+# STYLES
+# ═══════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
 :root {
-    --brand-dark: #14344F;
-    --brand: #2E75B6;
-    --brand-light: #D4E6F1;
-    --success: #27AE60;
-    --warning: #E67E22;
-    --danger: #C0392B;
-    --muted: #6B7280;
-    --bg-soft: #F7F9FC;
+    --brand-dark: #14344F; --brand: #2E75B6; --brand-light: #D4E6F1;
+    --success: #27AE60; --warning: #E67E22; --danger: #C0392B;
+    --muted: #6B7280; --bg-soft: #F7F9FC;
 }
-
-.stButton > button,
-.stDownloadButton > button,
-.stFormSubmitButton > button,
-.stLinkButton > a {
-    min-height: 56px !important;
-    font-size: 17px !important;
-    font-weight: 600 !important;
-    border-radius: 14px !important;
-    padding: 0.7rem 1.2rem !important;
+.block-container { padding-top: 1rem !important; }
+.stButton > button, .stDownloadButton > button, .stFormSubmitButton > button, .stLinkButton > a {
+    min-height: 52px !important; font-size: 16px !important; font-weight: 600 !important;
+    border-radius: 12px !important; padding: 0.55rem 1rem !important;
 }
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, var(--brand-dark), var(--brand)) !important;
-    color: white !important;
-    box-shadow: 0 3px 10px rgba(20,52,79,0.25) !important;
+    background: linear-gradient(135deg, var(--brand-dark), var(--brand)) !important; color: white !important;
 }
-input, textarea, select {
-    font-size: 17px !important;
-    min-height: 54px !important;
-    border-radius: 12px !important;
-}
-[data-baseweb="select"] > div {
-    min-height: 54px !important;
-    font-size: 17px !important;
-}
-[data-testid="stMetricValue"] { font-size: 26px !important; }
-[data-testid="stMetricLabel"] { font-size: 13px !important; }
-
-.stTabs [data-baseweb="tab-list"] {
-    gap: 6px;
-    padding: 4px 0;
-    border-bottom: 2px solid #E5E7EB;
-}
-.stTabs [data-baseweb="tab"] {
-    min-height: 52px !important;
-    font-size: 15px !important;
-    padding: 12px 18px !important;
-    border-radius: 10px 10px 0 0 !important;
-    white-space: nowrap !important;
-    font-weight: 600 !important;
-}
-
-.brand-header {
-    background: linear-gradient(135deg, var(--brand-dark), var(--brand));
-    color: white;
-    padding: 22px 24px;
-    margin: -16px -16px 24px -16px;
-    border-radius: 0 0 22px 22px;
-    box-shadow: 0 6px 20px rgba(20,52,79,0.2);
-}
-.brand-header .brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-.brand-header .logo {
-    font-size: 36px;
-    background: rgba(255,255,255,0.15);
-    padding: 8px 12px;
-    border-radius: 14px;
-}
-.brand-header .title {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-}
-.brand-header .subtitle {
-    font-size: 13px;
-    opacity: 0.85;
-    margin-top: 2px;
-}
-.brand-header .right {
-    text-align: right;
-    font-size: 13px;
-    opacity: 0.9;
-}
-
-.project-banner {
-    background: white;
-    border: 2px solid var(--brand-light);
-    border-radius: 16px;
-    padding: 18px 22px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 10px rgba(20,52,79,0.05);
-}
-.project-banner .row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-.project-banner .label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--muted);
-    font-weight: 600;
-}
-.project-banner .name {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--brand-dark);
-    margin-top: 2px;
-}
-.project-stats {
-    display: flex;
-    gap: 22px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-}
-.project-stats .stat {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: var(--brand-dark);
-}
-.project-stats .stat b { font-size: 18px; }
-.project-stats .stat .icon { font-size: 20px; }
-
-.status-pill {
-    padding: 8px 18px;
-    border-radius: 24px;
-    font-size: 14px;
-    font-weight: 700;
-    display: inline-block;
-}
-.status-started { background: #DBEAFE; color: #1E40AF; }
-.status-ongoing { background: #FEF3C7; color: #92400E; }
-.status-completed { background: #D1FAE5; color: #065F46; }
-
-.big-card {
-    background: white;
-    border: 2px solid #E5E7EB;
-    border-radius: 14px;
-    padding: 18px 20px;
-    margin-bottom: 14px;
-    transition: all 0.15s ease;
-}
-.big-card:hover {
-    border-color: var(--brand);
-    box-shadow: 0 4px 14px rgba(20,52,79,0.08);
-}
-.big-card .title { font-weight: 700; font-size: 16px; margin-bottom: 6px; color: var(--brand-dark); }
-.big-card .meta { color: var(--muted); font-size: 14px; line-height: 1.6; }
-.big-card.orange { border-color: #FED7AA; background: #FFF7ED; }
-.big-card.red { border-color: #FECACA; background: #FEF2F2; }
-.big-card.green { border-color: #A7F3D0; background: #F0FDF4; }
-
-section[data-testid="stSidebar"] .stRadio > div { gap: 6px !important; }
-section[data-testid="stSidebar"] .stRadio label {
-    font-size: 17px !important;
-    padding: 14px 16px !important;
-    border-radius: 12px !important;
-    background: #F7F9FC;
-    margin-bottom: 4px;
-    font-weight: 600 !important;
-    border: 2px solid transparent;
-    transition: all 0.15s ease;
-    cursor: pointer;
-}
-section[data-testid="stSidebar"] .stRadio label:hover {
-    background: var(--brand-light);
-}
-
-.section-title {
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--brand-dark);
-    margin: 26px 0 14px 0;
-    letter-spacing: 0.2px;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 46px 24px;
-    background: var(--bg-soft);
-    border-radius: 16px;
-    border: 2px dashed #CBD5E1;
-    color: var(--muted);
-    margin: 20px 0;
-}
-.empty-state .icon { font-size: 56px; margin-bottom: 12px; }
-.empty-state .msg { font-size: 16px; font-weight: 500; }
-
-.feature-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background: white;
-    border: 2px solid #E5E7EB;
-    border-radius: 12px;
-    margin-bottom: 10px;
-}
-.feature-row .info { flex: 1; }
-.feature-row .info .name { font-weight: 700; font-size: 15px; color: var(--brand-dark); }
-.feature-row .info .desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
-
+input, textarea, select { font-size: 16px !important; min-height: 50px !important; border-radius: 10px !important; }
+[data-baseweb="select"] > div { min-height: 50px !important; font-size: 16px !important; }
+.stTabs [data-baseweb="tab-list"] { gap: 4px; border-bottom: 2px solid #E5E7EB; overflow-x: auto; flex-wrap: nowrap; }
+.stTabs [data-baseweb="tab"] { min-height: 48px !important; font-size: 14px !important; padding: 10px 14px !important; font-weight: 600 !important; white-space: nowrap !important; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 12px 4px; margin-bottom: 12px; border-bottom: 2px solid #EEF2F6; }
+.topbar .title { font-size: 20px; font-weight: 800; color: var(--brand-dark); margin: 0; }
+.topbar .subtitle { font-size: 12px; color: var(--muted); }
+.brand-hero { background: linear-gradient(135deg, var(--brand-dark), var(--brand)); color: white; padding: 26px 24px; border-radius: 20px; margin-bottom: 22px; box-shadow: 0 8px 24px rgba(20,52,79,0.2); }
+.brand-hero .logo { font-size: 42px; }
+.brand-hero .title { font-size: 24px; font-weight: 800; margin-top: 6px; }
+.brand-hero .sub { font-size: 13px; opacity: 0.85; }
+.card { background: white; border: 2px solid #E5E7EB; border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; }
+.card .title { font-weight: 700; font-size: 16px; color: var(--brand-dark); margin-bottom: 6px; }
+.card .meta { color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+.card.low { border-color: #FECACA; background: #FEF2F2; }
+.card.warn { border-color: #FED7AA; background: #FFF7ED; }
+.card.good { border-color: #A7F3D0; background: #F0FDF4; }
+.pill { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block; white-space: nowrap; }
+.pill-started { background: #DBEAFE; color: #1E40AF; }
+.pill-ongoing { background: #FEF3C7; color: #92400E; }
+.pill-completed { background: #D1FAE5; color: #065F46; }
+.h-sec { font-size: 15px; font-weight: 800; color: var(--brand-dark); margin: 22px 0 10px 0; letter-spacing: 0.3px; }
+.empty { text-align: center; padding: 40px 20px; background: var(--bg-soft); border-radius: 14px; border: 2px dashed #CBD5E1; color: var(--muted); }
+.empty .icon { font-size: 48px; }
+.empty .msg { font-size: 15px; margin-top: 8px; }
+.job-card { background: white; border: 2px solid #E5E7EB; border-radius: 14px; padding: 16px 18px; margin-bottom: 10px; }
+.job-card .name { font-size: 16px; font-weight: 700; color: var(--brand-dark); }
+.job-card .sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.job-card .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 @media (max-width: 768px) {
-    .block-container { padding: 0.5rem 0.9rem !important; }
-    h1 { font-size: 26px !important; }
-    h2 { font-size: 22px !important; }
-    h3 { font-size: 18px !important; }
-    .brand-header { padding: 16px 18px; margin: -8px -12px 16px -12px; }
-    .brand-header .title { font-size: 18px; }
-    .brand-header .logo { font-size: 28px; padding: 6px 10px; }
-    .project-banner { padding: 14px 16px; }
-    .project-banner .name { font-size: 17px; }
-    .project-stats { gap: 14px; }
-    .project-stats .stat { font-size: 12px; }
-    .project-stats .stat b { font-size: 15px; }
+    .block-container { padding: 0.8rem 0.9rem !important; }
+    h1, .topbar .title { font-size: 20px !important; }
     .stButton > button { width: 100% !important; }
+    .brand-hero { padding: 20px 18px; }
+    .brand-hero .title { font-size: 20px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -260,20 +80,12 @@ DB_FILE_PATH = "shop_erp_data.json"
 
 def get_default_db():
     return {
-        "active_project": None,
         "offcut_warning_days": 60,
         "low_stock_thresholds": {"glass_sheets": 3, "aluminum_meters": 20.0, "accessories": 5},
         "settings": {"kerf": 3, "edge_trim": 5},
-        "features": {
-            "photos": True,
-            "offcut_tracking": True,
-            "sharing": True,
-            "low_stock_alerts": True,
-            "stale_offcut_alerts": True,
-            "print_mode": True,
-            "customer_search": True,
-            "auto_save": True,
-        },
+        "features": {"photos": True, "offcut_tracking": True, "sharing": True,
+                     "low_stock_alerts": True, "stale_offcut_alerts": True,
+                     "print_mode": True, "customer_search": True, "auto_save": True},
         "inventory": {"glass": {}, "remnants": [], "aluminum": {}, "accessories": {}},
         "projects": {},
         "recent": {"materials": [], "aluminum": [], "accessories": []},
@@ -292,10 +104,8 @@ def migrate_db(db):
     for rem in db["inventory"]["remnants"]:
         if "id" not in rem: rem["id"] = str(uuid.uuid4())[:8]
         if "date_added" not in rem: rem["date_added"] = datetime.now().strftime("%Y-%m-%d")
-    status_map = {
-        "Measured": "Started", "Fabricated": "Ongoing", "Delivered": "Ongoing",
-        "Installed": "Ongoing", "Paid": "Completed",
-    }
+    status_map = {"Measured": "Started", "Fabricated": "Ongoing", "Delivered": "Ongoing",
+                  "Installed": "Ongoing", "Paid": "Completed"}
     for name, proj in db["projects"].items():
         s = proj.get("status", "Started")
         if s in status_map: proj["status"] = status_map[s]
@@ -310,8 +120,7 @@ def migrate_db(db):
 @st.cache_resource
 def get_github_client():
     try:
-        token = st.secrets["github"]["token"]
-        return Github(auth=Auth.Token(token))  # ✅ Fixed deprecation
+        return Github(auth=Auth.Token(st.secrets["github"]["token"]))
     except Exception:
         return None
 
@@ -332,8 +141,7 @@ def load_db():
         return get_default_db()
 
 def save_db(db, silent=False):
-    if not db.get("features", {}).get("auto_save", True) and not silent:
-        return True
+    if not db.get("features", {}).get("auto_save", True) and not silent: return True
     client = get_github_client()
     if client is None: return False
     try:
@@ -352,10 +160,19 @@ def save_db(db, silent=False):
         if not silent: st.error(f"❌ Save failed: {e}")
         return False
 
-if "db" not in st.session_state:
-    st.session_state.db = load_db()
+if "db" not in st.session_state: st.session_state.db = load_db()
 db = st.session_state.db
 feat = db.get("features", {})
+
+# ═══════════════════════════════════════════════════════════════
+# NAVIGATION
+# ═══════════════════════════════════════════════════════════════
+if "view" not in st.session_state: st.session_state.view = "home"
+if "active_job" not in st.session_state: st.session_state.active_job = None
+
+def goto(view, job=None):
+    st.session_state.view = view
+    if job is not None: st.session_state.active_job = job
 
 # ═══════════════════════════════════════════════════════════════
 # UTILITIES
@@ -368,22 +185,34 @@ def remember_recent(cat, val):
     db["recent"][cat] = lst[:5]
 
 def days_old(date_str):
-    try:
-        return (datetime.now().date() - datetime.strptime(date_str, "%Y-%m-%d").date()).days
-    except Exception:
-        return 0
+    try: return (datetime.now().date() - datetime.strptime(date_str, "%Y-%m-%d").date()).days
+    except Exception: return 0
 
 def offcut_badge(days, warn):
-    if days >= int(warn * 1.5): return f"🔴 {days}d", "red"
-    if days >= warn:            return f"🟠 {days}d", "orange"
-    if days >= warn / 2:        return f"🟡 {days}d", ""
+    if days >= int(warn * 1.5): return f"🔴 {days}d", "low"
+    if days >= warn: return f"🟠 {days}d", "warn"
+    if days >= warn / 2: return f"🟡 {days}d", ""
     return f"🟢 {days}d", ""
 
 def get_stale_offcuts():
     if not feat.get("stale_offcut_alerts", True): return []
     warn = db.get("offcut_warning_days", 60)
-    stale = [r for r in db["inventory"]["remnants"] if days_old(r.get("date_added", "")) >= warn]
-    return sorted(stale, key=lambda r: r.get("date_added", ""))
+    return sorted([r for r in db["inventory"]["remnants"] if days_old(r.get("date_added", "")) >= warn],
+                  key=lambda r: r.get("date_added", ""))
+
+def get_low_stock_items():
+    if not feat.get("low_stock_alerts", True): return []
+    items = []
+    for m, s in db["inventory"]["glass"].items():
+        if sum(s.values()) <= db["low_stock_thresholds"]["glass_sheets"]:
+            items.append({"type": "glass", "name": m, "qty": sum(s.values())})
+    for p, mm in db["inventory"]["aluminum"].items():
+        if mm <= db["low_stock_thresholds"]["aluminum_meters"]:
+            items.append({"type": "aluminum", "name": p, "qty": mm})
+    for i, q in db["inventory"]["accessories"].items():
+        if q <= db["low_stock_thresholds"]["accessories"]:
+            items.append({"type": "accessory", "name": i, "qty": q})
+    return items
 
 def compress_image(uploaded_file, max_w=1000, quality=65):
     try:
@@ -395,57 +224,179 @@ def compress_image(uploaded_file, max_w=1000, quality=65):
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=quality, optimize=True)
         return base64.b64encode(buf.getvalue()).decode("utf-8")
-    except Exception:
-        return None
+    except Exception: return None
+
+# ═══════════════════════════════════════════════════════════════
+# CUTTING MAP — ruler, numbered pieces, cut lines, dimensions
+# ═══════════════════════════════════════════════════════════════
+def _build_sheet_figure(abin, kerf, title_prefix="Sheet"):
+    """Build one cutting sheet figure (used for PNG + PDF)."""
+    fig = plt.figure(figsize=(14, 10), dpi=130)
+    ax = fig.add_axes([0.09, 0.07, 0.87, 0.86])
+    ax.set_xlim(-180, abin.width + 180)
+    ax.set_ylim(-180, abin.height + 180)
+    ax.set_aspect("equal")
+
+    # Sheet background
+    ax.add_patch(patches.Rectangle((0, 0), abin.width, abin.height,
+                                    facecolor="#FAFBFC", edgecolor="black", linewidth=3))
+
+    # Rulers on all 4 sides
+    step = 100 if abin.width < 2500 else 200
+    for x in range(0, int(abin.width) + 1, step):
+        is_major = (x % 500 == 0)
+        ax.plot([x, x], [abin.height, abin.height + (50 if is_major else 25)],
+                color="#333" if is_major else "#999", linewidth=1.2 if is_major else 0.8)
+        ax.plot([x, x], [0, -(50 if is_major else 25)],
+                color="#333" if is_major else "#999", linewidth=1.2 if is_major else 0.8)
+        if is_major:
+            ax.text(x, abin.height + 65, str(x), ha="center", va="bottom", fontsize=9, color="#333", weight="bold")
+            ax.text(x, -65, str(x), ha="center", va="top", fontsize=9, color="#333", weight="bold")
+
+    for y in range(0, int(abin.height) + 1, step):
+        is_major = (y % 500 == 0)
+        ax.plot([0, -(50 if is_major else 25)], [y, y],
+                color="#333" if is_major else "#999", linewidth=1.2 if is_major else 0.8)
+        ax.plot([abin.width, abin.width + (50 if is_major else 25)], [y, y],
+                color="#333" if is_major else "#999", linewidth=1.2 if is_major else 0.8)
+        if is_major:
+            ax.text(-65, y, str(y), ha="right", va="center", fontsize=9, color="#333", weight="bold")
+            ax.text(abin.width + 65, y, str(y), ha="left", va="center", fontsize=9, color="#333", weight="bold")
+
+    # Red dashed cut lines
+    for rect in abin:
+        if 0 < rect.x + rect.width < abin.width:
+            ax.plot([rect.x + rect.width, rect.x + rect.width], [0, abin.height],
+                    color="#E74C3C", linestyle="--", linewidth=1, alpha=0.55)
+        if 0 < rect.y + rect.height < abin.height:
+            ax.plot([0, abin.width], [rect.y + rect.height, rect.y + rect.height],
+                    color="#E74C3C", linestyle="--", linewidth=1, alpha=0.55)
+
+    # Numbered pieces
+    sorted_rects = sorted(abin, key=lambda r: (-(r.y + r.height), r.x))
+    used = 0
+    for idx, rect in enumerate(sorted_rects, start=1):
+        pw = rect.width - kerf
+        ph = rect.height - kerf
+        ax.add_patch(patches.Rectangle((rect.x, rect.y), pw, ph,
+                                        facecolor="#D6EAF8", edgecolor="#1F4E79", linewidth=2))
+        badge_r = 42
+        bx = rect.x + badge_r + 4
+        by = rect.y + ph - badge_r - 4
+        ax.add_patch(patches.Circle((bx, by), radius=badge_r, facecolor="#1F4E79",
+                                     edgecolor="white", linewidth=2, zorder=5))
+        ax.text(bx, by, str(idx), ha="center", va="center",
+                fontsize=18, color="white", weight="bold", zorder=6)
+
+        cx, cy = rect.x + pw / 2, rect.y + ph / 2
+        w_int, h_int = int(pw), int(ph)
+        if pw > 250:
+            ax.text(cx, rect.y + 12, f"W: {w_int} mm", ha="center", va="bottom",
+                    fontsize=10, color="#B03A2E", weight="bold")
+        if ph > 250:
+            ax.text(rect.x + 12, cy, f"H: {h_int}", ha="left", va="center",
+                    fontsize=10, color="#B03A2E", weight="bold", rotation=90)
+        if pw > 350 and ph > 200:
+            ax.text(cx, cy, f"{w_int} × {h_int}", ha="center", va="center",
+                    fontsize=11, color="#1F4E79", weight="bold")
+            if rect.rid and rect.rid != "Unnamed":
+                ax.text(cx, cy - 30, f"📍 {rect.rid[:24]}", ha="center", va="top",
+                        fontsize=8, color="#555", style="italic")
+        elif pw > 200 and ph > 100:
+            ax.text(cx, cy, f"{w_int}×{h_int}", ha="center", va="center",
+                    fontsize=9, color="#1F4E79", weight="bold")
+        used += pw * ph
+
+    waste_pct = ((abin.width * abin.height - used) / (abin.width * abin.height)) * 100
+    ax.set_title(f"{title_prefix}  ·  Sheet: {int(abin.width)} × {int(abin.height)} mm"
+                 f"  ·  {len(abin)} pieces  ·  Waste: {waste_pct:.1f}%",
+                 fontsize=13, weight="bold", pad=22)
+    ax.axis("off")
+    return fig
+
 
 def render_sheet_png(abin, kerf, title_prefix="Sheet"):
-    fig, ax = plt.subplots(figsize=(10, 8), dpi=120)
-    ax.set_xlim(0, abin.width + 5); ax.set_ylim(0, abin.height + 5)
-    ax.set_aspect("equal")
-    ax.add_patch(patches.Rectangle((0, 0), abin.width, abin.height, fill=False, edgecolor="black", linewidth=2))
-    used = 0
-    for rect in abin:
-        ax.add_patch(patches.Rectangle((rect.x, rect.y), rect.width - kerf, rect.height - kerf,
-                                        facecolor="#D4E6F1", edgecolor="#1F4E79", linewidth=1.5))
-        ax.text(rect.x + (rect.width - kerf) / 2, rect.y + (rect.height - kerf) / 2,
-                f"{int(rect.width - kerf)}×{int(rect.height - kerf)}\n{rect.rid}",
-                ha="center", va="center", fontsize=11,
-                rotation=90 if rect.height > rect.width else 0,
-                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="none", alpha=0.9))
-        used += (rect.width - kerf) * (rect.height - kerf)
-    waste = ((abin.width * abin.height - used) / (abin.width * abin.height)) * 100
-    plt.title(f"{title_prefix} | {abin.bid}\nSize: {int(abin.width)} × {int(abin.height)} mm  |  Waste: {waste:.1f}%", fontsize=12)
-    plt.tight_layout()
-    buf = io.BytesIO(); fig.savefig(buf, format="png", dpi=110, bbox_inches="tight"); plt.close(fig)
+    """Render one sheet as PNG (kept for preview)."""
+    fig = _build_sheet_figure(abin, kerf, title_prefix)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
     return buf.getvalue()
 
+
+def render_all_sheets_pdf(bins, kerf, job_name):
+    """Generate ONE PDF containing every cutting sheet. Also returns summary stats."""
+    buf = io.BytesIO()
+    total_pieces = 0
+    total_waste_area = 0
+    total_sheet_area = 0
+
+    with PdfPages(buf) as pdf:
+        for i, abin in enumerate(bins):
+            fig = _build_sheet_figure(abin, kerf, f"Sheet {i+1}")
+            pdf.savefig(fig, bbox_inches="tight", facecolor="white")
+            plt.close(fig)
+
+            total_pieces += len(abin)
+            used = sum((r.width - kerf) * (r.height - kerf) for r in abin)
+            total_waste_area += (abin.width * abin.height) - used
+            total_sheet_area += abin.width * abin.height
+
+        d = pdf.infodict()
+        d['Title'] = f'{job_name} — Cutting Plan'
+        d['Author'] = 'Abdiglass and ALM Shop ERP'
+        d['Subject'] = f'{len(bins)} sheet(s) · {total_pieces} pieces'
+        d['Keywords'] = 'cutting plan glass fabrication'
+
+    buf.seek(0)
+    avg_waste = (total_waste_area / total_sheet_area * 100) if total_sheet_area else 0
+    return buf.getvalue(), {
+        "sheets": len(bins),
+        "pieces": total_pieces,
+        "avg_waste": avg_waste,
+        "total_area_m2": total_sheet_area / 1_000_000,
+    }
+
+
+def parse_bulk_text(text, available_materials):
+    """Parse bulk input. Accepts lines: Location, Material, Width, Height, Qty"""
+    rows, errors = [], []
+    for i, line in enumerate(text.strip().splitlines(), start=1):
+        line = line.strip()
+        if not line: continue
+        parts = [p.strip() for p in line.replace("\t", ",").replace(";", ",").split(",")]
+        if len(parts) < 5:
+            errors.append(f"Line {i}: need 5 values (Location, Material, Width, Height, Qty)")
+            continue
+        loc, mat = parts[0], parts[1]
+        try:
+            w = float(parts[2]); h = float(parts[3]); q = int(float(parts[4]))
+        except ValueError:
+            errors.append(f"Line {i}: numbers invalid")
+            continue
+        if w <= 0 or h <= 0 or q <= 0:
+            errors.append(f"Line {i}: dimensions/qty must be > 0")
+            continue
+        if mat not in available_materials:
+            errors.append(f"Line {i}: material '{mat}' not in stock")
+            continue
+        rows.append({"Location": loc or "Unnamed", "Material": mat,
+                     "Width": w, "Height": h, "Quantity": q})
+    return rows, errors
+
 def empty_state(icon, msg):
-    st.markdown(f'<div class="empty-state"><div class="icon">{icon}</div><div class="msg">{msg}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="empty"><div class="icon">{icon}</div><div class="msg">{msg}</div></div>',
+                unsafe_allow_html=True)
 
-def section_title(text):
-    st.markdown(f'<div class="section-title">{text}</div>', unsafe_allow_html=True)
+def hsec(text):
+    st.markdown(f'<div class="h-sec">{text}</div>', unsafe_allow_html=True)
 
-# ═══════════════════════════════════════════════════════════════
-# 🆕 NAVIGATION QUEUE (applied BEFORE widget renders)
-# ═══════════════════════════════════════════════════════════════
-NAV_OPTIONS = ["🏠 Dashboard", "📦 Warehouse", "🛠️ Jobs", "📊 Reports", "⚙️ Settings"]
-
-# Apply pending navigation before the radio widget is created
-if "pending_nav" in st.session_state and st.session_state.pending_nav:
-    if st.session_state.pending_nav in NAV_OPTIONS:
-        st.session_state.nav_radio = st.session_state.pending_nav
-    st.session_state.pending_nav = None
-
-# Initialize nav state
-if "nav_radio" not in st.session_state:
-    st.session_state.nav_radio = "🏠 Dashboard"
-
-def goto(page):
-    """Queue navigation to a page (safe to call inside buttons)."""
-    st.session_state.pending_nav = page
+def status_pill_class(s):
+    return {"Started": "pill-started", "Ongoing": "pill-ongoing",
+            "Completed": "pill-completed"}.get(s, "pill-started")
 
 # ═══════════════════════════════════════════════════════════════
-# PRINT MODE (early exit)
+# PRINT MODE
 # ═══════════════════════════════════════════════════════════════
 if st.session_state.get("print_mode") and st.session_state.get("generated_bins"):
     st.markdown("""
@@ -454,12 +405,12 @@ if st.session_state.get("print_mode") and st.session_state.get("generated_bins")
         header, [data-testid="stSidebar"], [data-testid="stToolbar"],
         [data-testid="stDecoration"], [data-testid="stStatusWidget"],
         footer, .stButton, .stCheckbox, .stAlert, .stLinkButton { display: none !important; }
-        .main .block-container { padding: 0 !important; max-width: 100% !important; }
+        .main .block-container { padding: 0 !important; }
     }
     </style>
     """, unsafe_allow_html=True)
-    st.title("🖨️ Cutting Sheet")
-    st.caption(f"Project: **{db.get('active_project', 'N/A')}** — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    st.title("🖨️ Cutting Sheets")
+    st.caption(f"Job: **{st.session_state.active_job}** — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     if st.button("✖ Exit Print Mode", width="stretch"):
         st.session_state.print_mode = False; st.rerun()
     st.divider()
@@ -470,495 +421,234 @@ if st.session_state.get("print_mode") and st.session_state.get("generated_bins")
     st.stop()
 
 # ═══════════════════════════════════════════════════════════════
-# BRAND HEADER
+# ROUTE GUARD
 # ═══════════════════════════════════════════════════════════════
-st.markdown(f"""
-<div class="brand-header">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div class="brand">
-            <div class="logo">🏭</div>
-            <div>
-                <div class="title">Abdiglass and ALM Shop ERP</div>
-                <div class="subtitle">Glass & Aluminum Fabrication Management</div>
-            </div>
-        </div>
-        <div class="right">
-            {datetime.now().strftime('%A, %d %b %Y')}
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+if st.session_state.view == "job":
+    if not st.session_state.active_job or st.session_state.active_job not in db["projects"]:
+        st.session_state.view = "home"; st.session_state.active_job = None
 
 # ═══════════════════════════════════════════════════════════════
-# SIDEBAR NAVIGATION
+# HOME
 # ═══════════════════════════════════════════════════════════════
-with st.sidebar:
-    st.markdown("### 🧭 Navigation")
-    nav = st.radio(
-        "Navigate",
-        NAV_OPTIONS,
-        label_visibility="collapsed",
-        key="nav_radio"
-    )
-    st.divider()
-
-    if feat.get("low_stock_alerts", True):
-        alerts = []
-        for m, s in db["inventory"]["glass"].items():
-            if sum(s.values()) <= db["low_stock_thresholds"]["glass_sheets"]:
-                alerts.append(f"🪟 {m}")
-        for p, mm in db["inventory"]["aluminum"].items():
-            if mm <= db["low_stock_thresholds"]["aluminum_meters"]:
-                alerts.append(f"📏 {p}")
-        for i, q in db["inventory"]["accessories"].items():
-            if q <= db["low_stock_thresholds"]["accessories"]:
-                alerts.append(f"🔧 {i}")
-
-        if alerts:
-            with st.expander(f"🚨 Low Stock ({len(alerts)})"):
-                for a in alerts: st.write(a)
-
-    stale = get_stale_offcuts()
-    if stale:
-        with st.expander(f"⏰ Stale Offcuts ({len(stale)})"):
-            warn = db.get("offcut_warning_days", 60)
-            for r in stale[:8]:
-                age = days_old(r.get("date_added", ""))
-                badge = "🔴" if age >= warn * 1.5 else "🟠"
-                st.write(f"{badge} {r['material']} {r['width']}×{r['height']} ({age}d)")
-
-    st.divider()
-    with st.expander("🔄 Data"):
-        if st.button("🔄 Reload from Cloud", width="stretch"):
-            get_github_client.clear()
-            st.session_state.db = load_db(); st.rerun()
-        st.download_button("📥 Backup", json.dumps(db, indent=4),
-                            f"backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-                            "application/json", width="stretch")
-
-# ═══════════════════════════════════════════════════════════════
-# MODULE — 🏠 DASHBOARD
-# ═══════════════════════════════════════════════════════════════
-if nav == "🏠 Dashboard":
-    st.markdown("## 🏠 Dashboard")
-
-    total_projects = len(db["projects"])
-    active_count = sum(1 for p in db["projects"].values() if p.get("status") in ["Started", "Ongoing"])
-    completed_count = sum(1 for p in db["projects"].values() if p.get("status") == "Completed")
-    glass_sheets = sum(sum(s.values()) for s in db["inventory"]["glass"].values())
-    aluminum_m = sum(db["inventory"]["aluminum"].values())
-    offcut_count = len(db["inventory"]["remnants"])
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("📁 Active Jobs", active_count)
-    c2.metric("✅ Completed", completed_count)
-    c3.metric("✂️ Offcuts", offcut_count)
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("🪟 Glass Sheets", glass_sheets)
-    c2.metric("📏 Aluminum (m)", f"{aluminum_m:.1f}")
-    c3.metric("🔧 Accessory Items", len(db["inventory"]["accessories"]))
-
-    st.divider()
-    section_title("⚡ Quick Actions")
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("➕ Create New Job", type="primary", width="stretch"):
-            st.session_state.pending_nav = "🛠️ Jobs"
-            st.session_state.show_new_project = True
-            st.rerun()
-    with c2:
-        if st.button("📦 Add Stock", width="stretch"):
-            st.session_state.pending_nav = "📦 Warehouse"
-            st.rerun()
-
-    section_title("🕒 Recent Jobs")
-    if db["projects"]:
-        recent = sorted(db["projects"].items(),
-                        key=lambda x: x[1].get("created", ""), reverse=True)[:5]
-        for name, p in recent:
-            status = p.get("status", "Started")
-            pill_class = {"Started": "status-started", "Ongoing": "status-ongoing",
-                          "Completed": "status-completed"}.get(status, "status-started")
-            cust = p.get("customer", {}).get("name", "—")
-            st.markdown(f"""<div class="big-card">
-            <div style="display:flex; justify-content:space-between; align-items:start; gap:12px;">
-                <div style="flex:1;">
-                    <div class="title">🏗️ {name}</div>
-                    <div class="meta">👤 {cust} · Glass: {len(p['glass'])} · Alum: {sum(a['Meters'] for a in p['aluminum']):.1f}m</div>
-                </div>
-                <span class="status-pill {pill_class}">{status}</span>
-            </div>
-            </div>""", unsafe_allow_html=True)
-    else:
-        empty_state("📋", "No jobs yet. Create your first job to get started.")
-
-# ═══════════════════════════════════════════════════════════════
-# MODULE — 📦 WAREHOUSE
-# ═══════════════════════════════════════════════════════════════
-elif nav == "📦 Warehouse":
-    st.markdown("## 📦 Warehouse")
-    st.caption("Physical stock in your shop")
-
-    wtab1, wtab2 = st.tabs(["👁️ View Stock", "➕ Receive Stock"])
-
-    with wtab1:
-        search = st.text_input("🔍 Search", placeholder="Search materials...")
-
-        stale = get_stale_offcuts()
-        if stale and not search and feat.get("offcut_tracking", True):
-            section_title(f"⏰ Stale Offcuts ({len(stale)})")
-            st.caption(f"Older than {db['offcut_warning_days']} days — oldest first.")
-            for r in stale:
-                age = days_old(r.get("date_added", ""))
-                _, css = offcut_badge(age, db["offcut_warning_days"])
-                st.markdown(f"""<div class="big-card {css}">
-                <div class="title">{r['material']} — {r['width']}×{r['height']} mm</div>
-                <div class="meta">Age: <b>{age} days</b> · Added: {r.get('date_added','-')}</div>
-                </div>""", unsafe_allow_html=True)
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button("🗑️ Scrap", key=f"sc_{r['id']}", width="stretch"):
-                        db["inventory"]["remnants"] = [x for x in db["inventory"]["remnants"] if x["id"] != r["id"]]
-                        save_db(db); st.rerun()
-                with c2:
-                    if st.button("✅ Keep 30d", key=f"kp_{r['id']}", width="stretch"):
-                        r["date_added"] = datetime.now().strftime("%Y-%m-%d")
-                        save_db(db); st.rerun()
-
-        section_title("🪟 Glass Sheets")
-        if db["inventory"]["glass"]:
-            for mat, sizes in db["inventory"]["glass"].items():
-                if search and search.lower() not in mat.lower(): continue
-                total = sum(sizes.values())
-                is_low = total <= db["low_stock_thresholds"]["glass_sheets"]
-                badge = "🔴 Low" if is_low else "🟢 In Stock"
-                css = "red" if is_low else ""
-                st.markdown(f"""<div class="big-card {css}">
-                <div class="title">{badge} — {mat}</div>
-                <div class="meta">2140×3300: <b>{sizes.get('2140 x 3300',0)}</b> · 2140×3660: <b>{sizes.get('2140 x 3660',0)}</b> · Total: <b>{total}</b></div>
-                </div>""", unsafe_allow_html=True)
-        else: empty_state("🪟", "No glass in stock.")
-
-        if feat.get("offcut_tracking", True):
-            section_title("✂️ All Offcuts")
-            if db["inventory"]["remnants"]:
-                for r in sorted(db["inventory"]["remnants"], key=lambda x: x.get("date_added", "")):
-                    age = days_old(r.get("date_added", ""))
-                    label, css = offcut_badge(age, db["offcut_warning_days"])
-                    st.markdown(f"""<div class="big-card {css}">
-                    <div class="title">{r['material']}</div>
-                    <div class="meta">{r['width']}×{r['height']} mm · Age: <b>{label}</b> · {r.get('date_added','-')}</div>
-                    </div>""", unsafe_allow_html=True)
-            else: empty_state("✂️", "No offcuts tracked.")
-
-        section_title("📏 Aluminum Profiles")
-        if db["inventory"]["aluminum"]:
-            for k, v in db["inventory"]["aluminum"].items():
-                is_low = v <= db["low_stock_thresholds"]["aluminum_meters"]
-                badge = "🔴 Low" if is_low else "🟢 OK"
-                css = "red" if is_low else ""
-                st.markdown(f"""<div class="big-card {css}">
-                <div class="title">{badge} — {k}</div>
-                <div class="meta"><b>{v:.2f} m</b> available</div>
-                </div>""", unsafe_allow_html=True)
-        else: empty_state("📏", "No aluminum in stock.")
-
-        section_title("🔧 Accessories")
-        if db["inventory"]["accessories"]:
-            for k, v in db["inventory"]["accessories"].items():
-                is_low = v <= db["low_stock_thresholds"]["accessories"]
-                badge = "🔴 Low" if is_low else "🟢 OK"
-                css = "red" if is_low else ""
-                st.markdown(f"""<div class="big-card {css}">
-                <div class="title">{badge} — {k}</div>
-                <div class="meta"><b>{v}</b> pcs</div>
-                </div>""", unsafe_allow_html=True)
-        else: empty_state("🔧", "No accessories in stock.")
-
-    with wtab2:
-        section_title("🪟 Add Glass Sheets")
-        with st.form("add_glass", clear_on_submit=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                ch = st.selectbox("Material", ["-- New --"] + db["recent"]["materials"])
-                gm = st.text_input("New name", placeholder="e.g., 6mm Clear") if ch == "-- New --" else ch
-            with c2:
-                gsz = st.selectbox("Sheet Size", ["2140 x 3300", "2140 x 3660"])
-                gq = st.number_input("Qty", min_value=1, step=1, value=1)
-            if st.form_submit_button("➕ Add Glass", type="primary", width="stretch"):
-                if not gm or not gm.strip():
-                    st.error("Enter a name.")
-                else:
-                    gm = gm.strip()
-                    if gm not in db["inventory"]["glass"]:
-                        db["inventory"]["glass"][gm] = {"2140 x 3300": 0, "2140 x 3660": 0}
-                    db["inventory"]["glass"][gm][gsz] += gq
-                    remember_recent("materials", gm)
-                    save_db(db); st.rerun()
-
-        if feat.get("offcut_tracking", True):
-            section_title("✂️ Add Offcut")
-            if db["inventory"]["glass"]:
-                with st.form("add_rem", clear_on_submit=True):
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        rm = st.selectbox("Material", list(db["inventory"]["glass"].keys()))
-                        rw = st.number_input("Width (mm)", min_value=100, step=10, value=1000)
-                    with c2:
-                        rh = st.number_input("Height (mm)", min_value=100, step=10, value=1000)
-                    if st.form_submit_button("➕ Add Offcut", type="primary", width="stretch"):
-                        db["inventory"]["remnants"].append({
-                            "id": str(uuid.uuid4())[:8], "material": rm,
-                            "width": rw, "height": rh,
-                            "date_added": datetime.now().strftime("%Y-%m-%d")})
-                        save_db(db); st.rerun()
-            else:
-                st.info("Add glass first.")
-
-        section_title("📏 Add Aluminum")
-        with st.form("add_alum", clear_on_submit=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                ch = st.selectbox("Profile", ["-- New --"] + db["recent"]["aluminum"])
-                apr = st.text_input("New profile", placeholder="e.g., 60mm Frame") if ch == "-- New --" else ch
-            with c2:
-                am = st.number_input("Meters", min_value=1.0, step=1.0, value=6.0)
-            if st.form_submit_button("➕ Add Aluminum", type="primary", width="stretch"):
-                if not apr or not apr.strip():
-                    st.error("Enter a name.")
-                else:
-                    apr = apr.strip()
-                    db["inventory"]["aluminum"][apr] = db["inventory"]["aluminum"].get(apr, 0) + am
-                    remember_recent("aluminum", apr)
-                    save_db(db); st.rerun()
-
-        section_title("🔧 Add Accessory")
-        with st.form("add_acc", clear_on_submit=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                ch = st.selectbox("Item", ["-- New --"] + db["recent"]["accessories"])
-                ac = st.text_input("New item", placeholder="e.g., Door Handles") if ch == "-- New --" else ch
-            with c2:
-                aq = st.number_input("Qty", min_value=1, step=1, value=1)
-            if st.form_submit_button("➕ Add Accessory", type="primary", width="stretch"):
-                if not ac or not ac.strip():
-                    st.error("Enter a name.")
-                else:
-                    ac = ac.strip()
-                    db["inventory"]["accessories"][ac] = db["inventory"]["accessories"].get(ac, 0) + aq
-                    remember_recent("accessories", ac)
-                    save_db(db); st.rerun()
-
-# ═══════════════════════════════════════════════════════════════
-# MODULE — 🛠️ JOBS
-# ═══════════════════════════════════════════════════════════════
-elif nav == "🛠️ Jobs":
-    st.markdown("## 🛠️ Jobs")
-
-    if st.session_state.get("show_new_project"):
-        with st.expander("➕ Create New Job", expanded=True):
-            new_proj = st.text_input("Job Name", placeholder="e.g., Villa 4 - Bole")
-            if st.button("Create Job", type="primary", width="stretch"):
-                if not new_proj or not new_proj.strip():
-                    st.error("Enter a name.")
-                elif new_proj.strip() in db["projects"]:
-                    st.error("Already exists.")
-                else:
-                    db["projects"][new_proj.strip()] = {
-                        "status": "Started",
-                        "created": datetime.now().strftime("%Y-%m-%d"),
-                        "customer": {"name": "", "phone": "", "address": ""},
-                        "photos": [], "glass": [], "aluminum": [], "accessories": [],
-                    }
-                    db["active_project"] = new_proj.strip()
-                    save_db(db)
-                    st.session_state.show_new_project = False
-                    st.rerun()
-        st.divider()
-
-    project_names = list(db["projects"].keys())
-    if not project_names:
-        empty_state("🛠️", "No jobs yet.")
-        with st.expander("➕ Create your first job", expanded=True):
-            new_proj = st.text_input("Job Name")
-            if st.button("Create Job", type="primary", width="stretch"):
-                if new_proj and new_proj.strip():
-                    db["projects"][new_proj.strip()] = {
-                        "status": "Started",
-                        "created": datetime.now().strftime("%Y-%m-%d"),
-                        "customer": {"name": "", "phone": "", "address": ""},
-                        "photos": [], "glass": [], "aluminum": [], "accessories": [],
-                    }
-                    db["active_project"] = new_proj.strip()
-                    save_db(db); st.rerun()
-        st.stop()
-
-    if db["active_project"] not in project_names:
-        db["active_project"] = project_names[0]
-
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        selected = st.selectbox(
-            "🎯 Choose Job",
-            project_names,
-            index=project_names.index(db["active_project"]) if db["active_project"] in project_names else 0,
-        )
-        if selected != db["active_project"]:
-            db["active_project"] = selected
-            save_db(db, silent=True); st.rerun()
-    with col2:
-        st.write(""); st.write("")
-        if st.button("➕ New", width="stretch"):
-            st.session_state.show_new_project = True
-            st.rerun()
-
-    proj = db["projects"][db["active_project"]]
-
-    status = proj.get("status", "Started")
-    pill_class = {"Started": "status-started", "Ongoing": "status-ongoing",
-                  "Completed": "status-completed"}.get(status, "status-started")
-    cust = proj.get("customer", {})
-    glass_count = len(proj["glass"])
-    alum_m = sum(a["Meters"] for a in proj["aluminum"])
-    acc_qty = sum(a["Qty"] for a in proj["accessories"])
-
+if st.session_state.view == "home":
     st.markdown(f"""
-    <div class="project-banner">
-        <div class="row">
-            <div style="flex:1; min-width:200px;">
-                <div class="label">Active Job</div>
-                <div class="name">🏗️ {db['active_project']}</div>
-            </div>
-            <span class="status-pill {pill_class}">{status}</span>
-        </div>
-        <div class="project-stats">
-            <div class="stat"><span class="icon">🪟</span><b>{glass_count}</b> pieces</div>
-            <div class="stat"><span class="icon">📏</span><b>{alum_m:.1f}</b> m</div>
-            <div class="stat"><span class="icon">🔧</span><b>{acc_qty}</b> items</div>
-            <div class="stat"><span class="icon">👤</span>{cust.get('name') or 'No customer'}</div>
-        </div>
+    <div class="brand-hero">
+        <div class="logo">🏭</div>
+        <div class="title">Abdiglass and ALM Shop ERP</div>
+        <div class="sub">{datetime.now().strftime('%A, %d %b %Y')} · Glass & Aluminum Fabrication</div>
     </div>
     """, unsafe_allow_html=True)
 
-    section_title("📌 Job Status")
-    STATUS_OPTIONS = ["Started", "Ongoing", "Completed"]
-    cols = st.columns(3)
-    status_icons = {"Started": "🟢", "Ongoing": "🟠", "Completed": "✅"}
-    for i, s in enumerate(STATUS_OPTIONS):
-        with cols[i]:
-            is_act = (s == status)
-            if st.button(f"{status_icons[s]} {s}", key=f"st_{s}", width="stretch",
-                         type="primary" if is_act else "secondary"):
-                proj["status"] = s
-                save_db(db); st.rerun()
+    low = get_low_stock_items()
+    stale = get_stale_offcuts()
+    if low or stale:
+        parts = []
+        if low: parts.append(f"🚨 {len(low)} low stock")
+        if stale: parts.append(f"⏰ {len(stale)} stale offcuts")
+        st.warning(" · ".join(parts))
 
+    jobs = db["projects"]
+    active_jobs = [(n, p) for n, p in jobs.items() if p.get("status") in ["Started", "Ongoing"]]
+    active_jobs.sort(key=lambda x: x[1].get("created", ""), reverse=True)
+
+    hsec(f"🛠️ Active Jobs ({len(active_jobs)})")
+    if not active_jobs:
+        empty_state("✅", "No active jobs.")
+    else:
+        for name, p in active_jobs[:10]:
+            status = p.get("status", "Started")
+            cust = p.get("customer", {}).get("name", "")
+            glass_n = len(p["glass"]); alum_m = sum(a["Meters"] for a in p["aluminum"])
+            c1, c2 = st.columns([5, 2])
+            with c1:
+                st.markdown(f"""<div class="job-card"><div class="row">
+                    <div style="flex:1;"><div class="name">🏗️ {name}</div>
+                    <div class="sub">{('👤 '+cust+' · ') if cust else ''}🪟 {glass_n} · 📏 {alum_m:.1f}m</div></div>
+                    <span class="pill {status_pill_class(status)}">{status}</span>
+                </div></div>""", unsafe_allow_html=True)
+            with c2:
+                st.write("")
+                if st.button("Open →", key=f"open_{name}", type="primary", width="stretch"):
+                    goto("job", job=name); st.rerun()
+
+    hsec("⚡ Quick Actions")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("➕ New Job", type="primary", width="stretch"):
+            st.session_state.show_new_project = True; goto("job"); st.rerun()
+    with c2:
+        if st.button("📦 Warehouse", width="stretch"):
+            goto("warehouse"); st.rerun()
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("📊 Reports", width="stretch"): goto("reports"); st.rerun()
+    with c2:
+        if st.button("⚙️ Settings", width="stretch"): goto("settings"); st.rerun()
+
+    hsec("📊 Overview")
+    completed = sum(1 for p in jobs.values() if p.get("status") == "Completed")
+    glass_sheets = sum(sum(s.values()) for s in db["inventory"]["glass"].values())
+    aluminum_m = sum(db["inventory"]["aluminum"].values())
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Active", len(active_jobs)); c2.metric("Completed", completed); c3.metric("Total", len(jobs))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("🪟 Sheets", glass_sheets); c2.metric("📏 Alum (m)", f"{aluminum_m:.1f}")
+    c3.metric("✂️ Offcuts", len(db["inventory"]["remnants"]))
+
+# ═══════════════════════════════════════════════════════════════
+# JOB VIEW
+# ═══════════════════════════════════════════════════════════════
+elif st.session_state.view == "job":
+    if st.session_state.get("show_new_project"):
+        c1, c2 = st.columns([1, 9])
+        with c1:
+            if st.button("←", key="cancel_new"): st.session_state.show_new_project = False; st.rerun()
+        with c2: st.markdown('<div class="topbar"><div class="title">New Job</div></div>', unsafe_allow_html=True)
+        new_name = st.text_input("Job Name", placeholder="e.g., Villa 4 - Bole")
+        if st.button("Create", type="primary", width="stretch"):
+            if new_name and new_name.strip() and new_name.strip() not in db["projects"]:
+                db["projects"][new_name.strip()] = {
+                    "status": "Started", "created": datetime.now().strftime("%Y-%m-%d"),
+                    "customer": {"name": "", "phone": "", "address": ""},
+                    "photos": [], "glass": [], "aluminum": [], "accessories": []}
+                save_db(db)
+                st.session_state.show_new_project = False
+                goto("job", job=new_name.strip()); st.rerun()
+            else: st.error("Invalid or duplicate.")
+        st.stop()
+
+    proj = db["projects"][st.session_state.active_job]
+    status = proj.get("status", "Started")
+    cust = proj.get("customer", {})
+
+    c1, c2 = st.columns([1, 9])
+    with c1:
+        if st.button("←", key="back_job"): goto("home"); st.rerun()
+    with c2:
+        st.markdown(f"""<div style="padding:6px 0;">
+        <div style="font-size:20px;font-weight:800;color:#14344F;">🏗️ {st.session_state.active_job}</div>
+        <div style="font-size:12px;color:#6B7280;">{('👤 '+cust.get('name','')) if cust.get('name') else 'No customer'} · {proj.get('created','-')}</div>
+        </div>""", unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns(3)
+    status_icons = {"Started": "🟢", "Ongoing": "🟠", "Completed": "✅"}
+    for i, s in enumerate(["Started", "Ongoing", "Completed"]):
+        with [c1, c2, c3][i]:
+            if st.button(f"{status_icons[s]} {s}", key=f"st_{s}",
+                         type="primary" if s == status else "secondary", width="stretch"):
+                proj["status"] = s; save_db(db); st.rerun()
     st.divider()
 
-    pt1, pt2, pt3, pt4, pt5 = st.tabs(["📋 Info", "🪟 Cut Glass", "📦 Materials", "📸 Photos", "📜 History"])
+    t_info, t_cut, t_mat, t_photo, t_hist = st.tabs(["📋 Info", "🪟 Cut", "📦 Materials", "📸 Photos", "📜 History"])
 
-    with pt1:
-        section_title("👤 Customer Information")
-        cname = st.text_input("Customer Name", value=cust.get("name", ""))
+    # ===== INFO =====
+    with t_info:
+        hsec("👤 Customer")
+        cname = st.text_input("Name", value=cust.get("name", ""))
         cphone = st.text_input("Phone", value=cust.get("phone", ""))
         caddr = st.text_input("Site Address", value=cust.get("address", ""))
         if st.button("💾 Save Customer", type="primary", width="stretch"):
             proj["customer"] = {"name": cname, "phone": cphone, "address": caddr}
             save_db(db); st.success("Saved!")
-
         if cphone and feat.get("sharing", True):
-            phone_clean = cphone.replace(" ", "").replace("-", "")
-            wa_msg = quote(f"Hello {cname or ''}, regarding your project {db['active_project']}...")
-            st.link_button("📱 Message on WhatsApp", f"https://wa.me/{phone_clean}?text={wa_msg}",
-                            width="stretch")
-
+            pc = cphone.replace(" ", "").replace("-", "")
+            st.link_button("📱 WhatsApp", f"https://wa.me/{pc}?text={quote(f'Hello {cname}, regarding {st.session_state.active_job}')}", width="stretch")
         st.divider()
         with st.expander("⚠️ Danger Zone"):
             if st.button("🗑️ Delete This Job", type="secondary", width="stretch"):
-                del db["projects"][db["active_project"]]
-                db["active_project"] = None
-                save_db(db); st.rerun()
+                del db["projects"][st.session_state.active_job]; save_db(db); goto("home"); st.rerun()
 
-    with pt2:
+    # ===== CUT =====
+    with t_cut:
         if not db["inventory"]["glass"]:
-            empty_state("🪟", "No glass in warehouse. Add stock first.")
+            empty_state("🪟", "No glass in warehouse.")
         else:
             mats = list(db["inventory"]["glass"].keys())
-
             with st.expander("⚙️ Cutting Settings"):
                 c1, c2 = st.columns(2)
-                with c1:
-                    kerf = st.number_input("Blade Kerf (mm)",
-                                            value=int(db["settings"].get("kerf", 3)), step=1)
-                with c2:
-                    etrim = st.number_input("Edge Trim (mm)",
-                                             value=int(db["settings"].get("edge_trim", 5)), step=1)
+                with c1: kerf = st.number_input("Kerf (mm)", value=int(db["settings"].get("kerf", 3)), step=1)
+                with c2: etrim = st.number_input("Edge Trim (mm)", value=int(db["settings"].get("edge_trim", 5)), step=1)
                 if kerf != db["settings"]["kerf"] or etrim != db["settings"]["edge_trim"]:
-                    db["settings"]["kerf"] = kerf
-                    db["settings"]["edge_trim"] = etrim
+                    db["settings"]["kerf"] = kerf; db["settings"]["edge_trim"] = etrim
                     save_db(db, silent=True)
 
-            if "form_list" not in st.session_state:
-                st.session_state.form_list = []
+            if "form_list" not in st.session_state: st.session_state.form_list = []
 
-            section_title("➕ Add a Piece")
-            with st.form("add_piece", clear_on_submit=True):
-                c1, c2 = st.columns(2)
-                with c1:
-                    loc = st.text_input("Location", placeholder="e.g., Door 1")
-                    mat = st.selectbox("Material", mats)
-                with c2:
-                    w = st.number_input("Width (mm)", min_value=1, step=10, value=1000)
-                    h = st.number_input("Height (mm)", min_value=1, step=10, value=2000)
-                q = st.number_input("Quantity", min_value=1, step=1, value=1)
-                if st.form_submit_button("➕ Add Piece", type="primary", width="stretch"):
-                    st.session_state.form_list.append({
-                        "Location": loc or "Unnamed", "Material": mat,
-                        "Width": w, "Height": h, "Quantity": q})
-                    st.rerun()
+            input_mode = st.radio("Input method", ["⚡ Quick Add", "📋 Bulk Paste"], horizontal=True, key="input_mode")
+
+            if input_mode == "⚡ Quick Add":
+                hsec("➕ Add One Piece")
+                with st.form("add_piece", clear_on_submit=True):
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        loc = st.text_input("Location", placeholder="e.g., Door 1")
+                        mat = st.selectbox("Material", mats)
+                    with c2:
+                        w = st.number_input("Width (mm)", min_value=1, step=10, value=1000)
+                        h = st.number_input("Height (mm)", min_value=1, step=10, value=2000)
+                    q = st.number_input("Qty", min_value=1, step=1, value=1)
+                    if st.form_submit_button("➕ Add Piece", type="primary", width="stretch"):
+                        st.session_state.form_list.append({"Location": loc or "Unnamed", "Material": mat,
+                                                            "Width": w, "Height": h, "Quantity": q})
+                        st.rerun()
+            else:
+                hsec("📋 Bulk Paste")
+                st.caption("Paste one piece per line. Format: **Location, Material, Width, Height, Qty**")
+                st.code("Door 1, 6mm Clear, 915, 1845, 1\nDoor 2, 6mm Clear, 915, 1845, 1\nWindow 1, 4mm Clear, 1070, 2140, 2", language="text")
+                bulk_text = st.text_area("Bulk input", height=180, placeholder="Paste here...", key="bulk_area")
+                if st.button("📥 Parse & Add All", type="primary", width="stretch"):
+                    rows, errs = parse_bulk_text(bulk_text, mats)
+                    for e in errs: st.error(e)
+                    if rows:
+                        st.session_state.form_list.extend(rows)
+                        st.success(f"✅ Added {len(rows)} piece(s)")
+                        st.rerun()
 
             if st.session_state.form_list:
-                section_title(f"📝 Pieces ({len(st.session_state.form_list)})")
+                hsec(f"📝 Pieces ({len(st.session_state.form_list)})")
+                df = pd.DataFrame(st.session_state.form_list)
+                total_area = (df["Width"] * df["Height"] * df["Quantity"]).sum() / 1_000_000
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Total Pieces", int(df["Quantity"].sum()))
+                c2.metric("Total Area", f"{total_area:.2f} m²")
+                c3.metric("Unique", df["Material"].nunique())
+
                 for i, item in enumerate(st.session_state.form_list):
                     c1, c2 = st.columns([5, 1])
                     with c1:
-                        st.markdown(f"""<div class="big-card">
-                        <div class="title">{item['Location']}</div>
-                        <div class="meta">{item['Material']} — {item['Width']}×{item['Height']} mm × {item['Quantity']}</div>
+                        st.markdown(f"""<div class="card">
+                        <div class="title">{i+1}. {item['Location']}</div>
+                        <div class="meta">{item['Material']} · {item['Width']} × {item['Height']} mm · Qty <b>{item['Quantity']}</b></div>
                         </div>""", unsafe_allow_html=True)
                     with c2:
                         if st.button("🗑️", key=f"dl_{i}", width="stretch"):
                             st.session_state.form_list.pop(i); st.rerun()
 
-                st.divider()
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button("🗑️ Clear All", width="stretch"):
                         st.session_state.form_list = []; st.rerun()
                 with c2:
                     if st.button("🚀 Generate Cutting Plan", type="primary", width="stretch"):
-                        df = pd.DataFrame(st.session_state.form_list)
+                        df_plan = pd.DataFrame(st.session_state.form_list)
                         bins = []
                         stock = {"2140 x 3300": (2140-etrim, 3300-etrim),
                                  "2140 x 3660": (2140-etrim, 3660-etrim)}
-                        for material in df["Material"].unique():
-                            mdf = df[df["Material"] == material]
+                        for material in df_plan["Material"].unique():
+                            mdf = df_plan[df_plan["Material"] == material]
                             p = newPacker(rotation=True)
-
                             if feat.get("offcut_tracking", True):
-                                mat_remnants = [r for r in db["inventory"].get("remnants", []) if r["material"] == material]
-                                mat_remnants.sort(key=lambda r: r.get("date_added", "9999-99-99"))
-                                for rem in mat_remnants:
+                                rems = [r for r in db["inventory"].get("remnants", []) if r["material"] == material]
+                                rems.sort(key=lambda r: r.get("date_added", "9999-99-99"))
+                                for rem in rems:
                                     p.add_bin(rem["width"]-etrim, rem["height"]-etrim,
                                               bid=f"REMNANT|{rem['id']}|{rem['width']}x{rem['height']}")
-
                             for sn, d in stock.items():
                                 for _ in range(db["inventory"]["glass"][material].get(sn, 0)):
                                     p.add_bin(d[0], d[1], bid=f"{material}|{sn}")
                             for _, row in mdf.iterrows():
                                 for _ in range(int(row["Quantity"])):
-                                    p.add_rect(float(row["Width"])+kerf, float(row["Height"])+kerf,
-                                               rid=row["Location"])
+                                    p.add_rect(float(row["Width"])+kerf, float(row["Height"])+kerf, rid=row["Location"])
                             p.pack()
                             valid = [b for b in p if len(b) > 0]
                             if not valid and not mdf.empty:
@@ -983,390 +673,487 @@ elif nav == "🛠️ Jobs":
                         st.session_state.form_list = []
                         st.rerun()
             else:
-                empty_state("📐", "Add pieces above to start cutting.")
+                empty_state("📐", "Add pieces above.")
 
+            # ===== CUTTING MAPS — ONE PDF + ONE SHARE =====
             if st.session_state.get("generated_bins"):
                 st.divider()
-                section_title("🗺️ Cutting Plan")
+                hsec(f"🗺️ Cutting Plan ({len(st.session_state.generated_bins)} sheets)")
+
+                pdf_bytes, stats = render_all_sheets_pdf(
+                    st.session_state.generated_bins, kerf, st.session_state.active_job
+                )
+
+                c1, c2, c3 = st.columns(3)
+                c1.metric("📄 Sheets", stats["sheets"])
+                c2.metric("🔢 Pieces", stats["pieces"])
+                c3.metric("♻️ Avg Waste", f"{stats['avg_waste']:.1f}%")
+
+                st.download_button(
+                    "📥 Download Cutting Plan (PDF · all sheets)",
+                    pdf_bytes,
+                    f"{st.session_state.active_job}_CuttingPlan.pdf",
+                    "application/pdf",
+                    type="primary",
+                    width="stretch",
+                    key="dl_pdf_all",
+                )
 
                 c1, c2 = st.columns(2)
                 with c1:
                     if feat.get("print_mode", True):
-                        if st.button("🖨️ Print Mode", type="primary", width="stretch"):
+                        if st.button("🖨️ Print Mode", width="stretch"):
                             st.session_state.print_mode = True; st.rerun()
                 with c2:
                     if st.button("✅ Done Cutting", width="stretch"):
                         st.session_state.generated_bins = []; st.rerun()
 
                 if feat.get("sharing", True):
-                    proj_label = db["active_project"]
-                    pieces_summary = " | ".join([f"{g['Location']}:{g['Size']}" for g in proj["glass"][-20:]])
-                    share_text = f"🪟 Cutting Plan — {proj_label}\n{len(st.session_state.generated_bins)} sheet(s). Pieces: {pieces_summary[:200]}"
+                    share_text = (
+                        f"🪟 *Cutting Plan — {st.session_state.active_job}*\n"
+                        f"📄 Sheets: {stats['sheets']}\n"
+                        f"🔢 Pieces: {stats['pieces']}\n"
+                        f"♻️ Waste: {stats['avg_waste']:.1f}%\n\n"
+                        f"_PDF attached separately._"
+                    )
                     enc = quote(share_text)
+                    st.caption("📎 **Download the PDF above, then attach it in WhatsApp/Telegram.**")
                     c1, c2 = st.columns(2)
                     with c1:
-                        st.link_button("📱 WhatsApp", f"https://wa.me/?text={enc}", width="stretch")
+                        st.link_button("📱 Share on WhatsApp", f"https://wa.me/?text={enc}", width="stretch")
                     with c2:
-                        st.link_button("✈️ Telegram", f"https://t.me/share/url?url=&text={enc}", width="stretch")
+                        st.link_button("✈️ Share on Telegram", f"https://t.me/share/url?url=&text={enc}", width="stretch")
 
-                zip_buf = io.BytesIO()
-                with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-                    for i, abin in enumerate(st.session_state.generated_bins):
-                        zf.writestr(f"Sheet{i+1}.png", render_sheet_png(abin, kerf, f"Sheet {i+1}"))
-                st.download_button("📥 Download All Sheets (.zip)", zip_buf.getvalue(),
-                                    f"{db['active_project']}_CuttingSheets.zip",
-                                    "application/zip", width="stretch")
+                # Preview — tabs if multiple sheets, no per-sheet download
+                st.divider()
+                hsec("👀 Preview")
+
+                if len(st.session_state.generated_bins) > 1:
+                    sheet_tabs = st.tabs([f"Sheet {i+1}" for i in range(len(st.session_state.generated_bins))])
+                else:
+                    sheet_tabs = [st.container()]
 
                 for i, abin in enumerate(st.session_state.generated_bins):
-                    section_title(f"Sheet {i+1}")
-                    png = render_sheet_png(abin, kerf, f"Sheet {i+1}")
-                    st.image(png, use_container_width=True)
+                    with sheet_tabs[i]:
+                        png = render_sheet_png(abin, kerf, f"Sheet {i+1}")
+                        st.image(png, use_container_width=True)
 
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        st.download_button("📥 Download PNG", png,
-                                            f"Sheet{i+1}.png", "image/png",
-                                            key=f"dl_{i}", width="stretch")
-                    with c2:
-                        if feat.get("sharing", True):
-                            st.link_button("📱 Share",
-                                            f"https://wa.me/?text={quote(f'🪟 Sheet {i+1}')}",
-                                            key=f"wa_{i}", width="stretch")
+                        if feat.get("offcut_tracking", True):
+                            mx = my = 0
+                            for rect in abin:
+                                mx = max(mx, rect.x + rect.width)
+                                my = max(my, rect.y + rect.height)
+                            tw, th = abin.width, abin.height - my
+                            rw, rh = abin.width - mx, abin.height
+                            off = (int(tw), int(th)) if tw * th >= rw * rh else (int(rw), int(rh))
+                            st.caption(f"♻️ Largest leftover: **{off[0]}×{off[1]} mm**")
+                            if off[0] > 300 and off[1] > 300:
+                                if st.checkbox("Sheet cut? Save offcut?", key=f"c_{i}"):
+                                    if st.button("📥 Save Offcut", key=f"sv_{i}", width="stretch"):
+                                        mn = abin.bid.split("|")[0]
+                                        db["inventory"]["remnants"].append({
+                                            "id": str(uuid.uuid4())[:8],
+                                            "material": mn,
+                                            "width": off[0],
+                                            "height": off[1],
+                                            "date_added": datetime.now().strftime("%Y-%m-%d"),
+                                        })
+                                        save_db(db)
+                                        st.success("Saved!")
 
-                    if feat.get("offcut_tracking", True):
-                        mx = my = 0
-                        for rect in abin:
-                            mx = max(mx, rect.x + rect.width)
-                            my = max(my, rect.y + rect.height)
-                        tw, th = abin.width, abin.height - my
-                        rw, rh = abin.width - mx, abin.height
-                        off = (int(tw), int(th)) if tw*th >= rw*rh else (int(rw), int(rh))
-                        st.caption(f"Largest leftover: **{off[0]}×{off[1]} mm**")
-                        if off[0] > 300 and off[1] > 300:
-                            if st.checkbox("Sheet cut? Save offcut?", key=f"c_{i}"):
-                                if st.button("📥 Save Offcut", key=f"sv_{i}", width="stretch"):
-                                    mat_name = abin.bid.split("|")[0]
-                                    db["inventory"]["remnants"].append({
-                                        "id": str(uuid.uuid4())[:8], "material": mat_name,
-                                        "width": off[0], "height": off[1],
-                                        "date_added": datetime.now().strftime("%Y-%m-%d")})
-                                    save_db(db); st.success("Saved!")
-                    st.divider()
-
-    with pt3:
-        section_title("📏 Use Aluminum")
+    # ===== MATERIALS =====
+    with t_mat:
+        hsec("📏 Use Aluminum")
         if not db["inventory"]["aluminum"]:
-            empty_state("📏", "No aluminum in warehouse.")
+            empty_state("📏", "No aluminum.")
         else:
             with st.form("use_alum"):
                 profile = st.selectbox("Profile", list(db["inventory"]["aluminum"].keys()))
                 st.caption(f"Available: **{db['inventory']['aluminum'][profile]:.2f} m**")
                 meters = st.number_input("Meters Used", min_value=0.1, step=0.5, value=1.0)
-                note = st.text_input("Note (optional)")
+                note = st.text_input("Note")
                 if st.form_submit_button("📉 Deduct & Log", type="primary", width="stretch"):
                     if db["inventory"]["aluminum"][profile] >= meters:
                         db["inventory"]["aluminum"][profile] -= meters
                         proj["aluminum"].append({"Profile": profile, "Meters": meters, "Note": note,
                                                   "Date": datetime.now().strftime("%Y-%m-%d")})
-                        save_db(db); st.success("✅ Logged.")
-                    else:
-                        st.error("Not enough.")
-
+                        save_db(db); st.success("Logged.")
+                    else: st.error("Not enough.")
         st.divider()
-        section_title("🔧 Use Accessory")
+        hsec("🔧 Use Accessory")
         if not db["inventory"]["accessories"]:
-            empty_state("🔧", "No accessories in warehouse.")
+            empty_state("🔧", "No accessories.")
         else:
             with st.form("use_acc"):
                 item = st.selectbox("Accessory", list(db["inventory"]["accessories"].keys()))
                 st.caption(f"Available: **{db['inventory']['accessories'][item]}**")
                 qty = st.number_input("Quantity", min_value=1, step=1, value=1)
-                note = st.text_input("Note (optional)")
+                note = st.text_input("Note")
                 if st.form_submit_button("📉 Deduct & Log", type="primary", width="stretch"):
                     if db["inventory"]["accessories"][item] >= qty:
                         db["inventory"]["accessories"][item] -= qty
                         proj["accessories"].append({"Item": item, "Qty": qty, "Note": note,
                                                      "Date": datetime.now().strftime("%Y-%m-%d")})
-                        save_db(db); st.success("✅ Logged.")
-                    else:
-                        st.error("Not enough.")
+                        save_db(db); st.success("Logged.")
+                    else: st.error("Not enough.")
 
-    with pt4:
-        if not feat.get("photos", True):
-            st.info("📷 Photo attachments are disabled in Settings.")
+    # ===== PHOTOS =====
+    with t_photo:
+        if not feat.get("photos", True): st.info("Photos disabled in Settings.")
         else:
-            section_title("📸 Site Photos")
-            cam_tab, up_tab = st.tabs(["📷 Camera", "🖼️ Upload"])
-
-            with cam_tab:
+            hsec("📸 Photos")
+            ct, ut = st.tabs(["📷 Camera", "🖼️ Upload"])
+            with ct:
                 cam = st.camera_input("Take photo")
-                if cam:
-                    if st.button("💾 Save Photo", type="primary", width="stretch"):
-                        b64 = compress_image(cam)
-                        if b64:
-                            proj["photos"].append({
-                                "id": str(uuid.uuid4())[:8],
-                                "name": f"Cam_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg",
-                                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                "data": b64})
-                            save_db(db); st.rerun()
-
-            with up_tab:
-                uploaded = st.file_uploader("Upload photos", type=["jpg", "jpeg", "png"],
-                                             accept_multiple_files=True)
-                if uploaded:
-                    if st.button("💾 Save Uploads", type="primary", width="stretch"):
-                        prog = st.progress(0)
-                        for idx, f in enumerate(uploaded):
-                            b64 = compress_image(f)
-                            if b64:
-                                proj["photos"].append({
-                                    "id": str(uuid.uuid4())[:8], "name": f.name,
-                                    "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                    "data": b64})
-                            prog.progress((idx + 1) / len(uploaded))
+                if cam and st.button("💾 Save Photo", type="primary", width="stretch"):
+                    b64 = compress_image(cam)
+                    if b64:
+                        proj["photos"].append({"id": str(uuid.uuid4())[:8],
+                            "name": f"Cam_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg",
+                            "date": datetime.now().strftime("%Y-%m-%d %H:%M"), "data": b64})
                         save_db(db); st.rerun()
-
+            with ut:
+                ups = st.file_uploader("Upload", type=["jpg","jpeg","png"], accept_multiple_files=True)
+                if ups and st.button("💾 Save Uploads", type="primary", width="stretch"):
+                    prog = st.progress(0)
+                    for idx, f in enumerate(ups):
+                        b64 = compress_image(f)
+                        if b64:
+                            proj["photos"].append({"id": str(uuid.uuid4())[:8], "name": f.name,
+                                "date": datetime.now().strftime("%Y-%m-%d %H:%M"), "data": b64})
+                        prog.progress((idx+1)/len(ups))
+                    save_db(db); st.rerun()
             if proj.get("photos"):
-                section_title(f"Photos ({len(proj['photos'])})")
-                for i in range(len(proj["photos"]) - 1, -1, -1):
-                    photo = proj["photos"][i]
+                hsec(f"Photos ({len(proj['photos'])})")
+                for i in range(len(proj["photos"])-1, -1, -1):
+                    ph = proj["photos"][i]
                     try:
-                        st.image(base64.b64decode(photo["data"]),
-                                 caption=f"{photo['name']} — {photo['date']}",
-                                 use_container_width=True)
-                    except Exception:
-                        st.error("Failed to load.")
+                        st.image(base64.b64decode(ph["data"]), caption=f"{ph['name']} — {ph['date']}", use_container_width=True)
+                    except Exception: st.error("Failed")
                     if st.button("🗑️ Delete", key=f"ph_{i}", width="stretch"):
                         proj["photos"].pop(i); save_db(db); st.rerun()
-            else:
-                empty_state("📸", "No photos yet.")
+            else: empty_state("📸", "No photos.")
 
-    with pt5:
-        section_title("🕒 Full Activity Timeline")
-        timeline = []
-        for g in proj["glass"]:
-            timeline.append({"Date": g["Date"], "Type": "🪟 Glass",
-                              "Detail": f"{g['Location']} — {g['Material']} — {g['Size']}"})
-        for a in proj["aluminum"]:
-            timeline.append({"Date": a["Date"], "Type": "📏 Aluminum",
-                              "Detail": f"{a['Profile']} — {a['Meters']}m" + (f" ({a['Note']})" if a.get("Note") else "")})
-        for a in proj["accessories"]:
-            timeline.append({"Date": a["Date"], "Type": "🔧 Accessory",
-                              "Detail": f"{a['Item']} × {a['Qty']}" + (f" ({a['Note']})" if a.get("Note") else "")})
-
-        if not timeline:
-            empty_state("📜", "No activity yet.")
+    # ===== HISTORY =====
+    with t_hist:
+        hsec("🕒 Full Timeline")
+        tl = []
+        for g in proj["glass"]: tl.append({"Date": g["Date"], "Type": "🪟 Glass", "Detail": f"{g['Location']} — {g['Material']} — {g['Size']}"})
+        for a in proj["aluminum"]: tl.append({"Date": a["Date"], "Type": "📏 Aluminum", "Detail": f"{a['Profile']} — {a['Meters']}m"})
+        for a in proj["accessories"]: tl.append({"Date": a["Date"], "Type": "🔧 Accessory", "Detail": f"{a['Item']} × {a['Qty']}"})
+        if not tl: empty_state("📜", "No activity.")
         else:
-            timeline.sort(key=lambda x: x["Date"], reverse=True)
-            filter_type = st.multiselect("Filter by type",
-                                          ["🪟 Glass", "📏 Aluminum", "🔧 Accessory"],
-                                          default=["🪟 Glass", "📏 Aluminum", "🔧 Accessory"])
-            filtered = [t for t in timeline if t["Type"] in filter_type]
-
-            for d in sorted(set(t["Date"] for t in filtered), reverse=True):
+            tl.sort(key=lambda x: x["Date"], reverse=True)
+            for d in sorted(set(t["Date"] for t in tl), reverse=True):
                 st.markdown(f"##### 📅 {d}")
-                for t in [x for x in filtered if x["Date"] == d]:
-                    st.markdown(f"""<div class="big-card">
-                    <div class="title">{t['Type']}</div>
-                    <div class="meta">{t['Detail']}</div>
+                for t in [x for x in tl if x["Date"] == d]:
+                    st.markdown(f'<div class="card"><div class="title">{t["Type"]}</div><div class="meta">{t["Detail"]}</div></div>', unsafe_allow_html=True)
+            st.download_button("📥 Export Log", pd.DataFrame(tl).to_csv(index=False).encode("utf-8"),
+                                f"{st.session_state.active_job}_Log.csv", "text/csv", width="stretch")
+
+# ═══════════════════════════════════════════════════════════════
+# WAREHOUSE
+# ═══════════════════════════════════════════════════════════════
+elif st.session_state.view == "warehouse":
+    c1, c2 = st.columns([1, 9])
+    with c1:
+        if st.button("←", key="back_wh"): goto("home"); st.rerun()
+    with c2:
+        st.markdown('<div class="topbar"><div><div class="title">📦 Warehouse</div><div class="subtitle">Stock management</div></div></div>', unsafe_allow_html=True)
+
+    tabs = st.tabs(["🪟 Glass", "✂️ Offcuts", "📏 Aluminum", "🔧 Accessories", "➕ Add Stock"])
+
+    with tabs[0]:
+        hsec("🪟 Glass Sheets")
+        if db["inventory"]["glass"]:
+            for mat, sizes in db["inventory"]["glass"].items():
+                total = sum(sizes.values())
+                is_low = total <= db["low_stock_thresholds"]["glass_sheets"]
+                css = "low" if is_low else "good"
+                badge = "🔴 Low" if is_low else "🟢 In Stock"
+                c1, c2 = st.columns([5, 1])
+                with c1:
+                    st.markdown(f"""<div class="card {css}">
+                    <div class="title">{badge} — {mat}</div>
+                    <div class="meta">2140×3300: <b>{sizes.get('2140 x 3300',0)}</b> · 2140×3660: <b>{sizes.get('2140 x 3660',0)}</b> · Total: <b>{total}</b> sheets</div>
                     </div>""", unsafe_allow_html=True)
+                with c2:
+                    st.write("")
+                    if st.button("🗑️", key=f"delg_{mat}", width="stretch", help=f"Delete {mat}"):
+                        st.session_state[f"confirm_del_g_{mat}"] = True
+                if st.session_state.get(f"confirm_del_g_{mat}"):
+                    st.warning(f"Delete **{mat}** entirely? ({total} sheets)")
+                    cc1, cc2 = st.columns(2)
+                    with cc1:
+                        if st.button("✅ Yes, delete", key=f"yesg_{mat}", type="primary", width="stretch"):
+                            del db["inventory"]["glass"][mat]
+                            st.session_state[f"confirm_del_g_{mat}"] = False
+                            save_db(db); st.rerun()
+                    with cc2:
+                        if st.button("❌ Cancel", key=f"nog_{mat}", width="stretch"):
+                            st.session_state[f"confirm_del_g_{mat}"] = False; st.rerun()
+        else: empty_state("🪟", "No glass in stock.")
 
-            st.divider()
-            st.download_button("📥 Export Full Log (CSV)",
-                                pd.DataFrame(filtered).to_csv(index=False).encode("utf-8"),
-                                f"{db['active_project']}_FullLog.csv",
-                                "text/csv", width="stretch")
+    with tabs[1]:
+        if not feat.get("offcut_tracking", True): st.info("Offcut tracking disabled.")
+        else:
+            hsec(f"✂️ Offcuts ({len(db['inventory']['remnants'])})")
+            if db["inventory"]["remnants"]:
+                for r in sorted(db["inventory"]["remnants"], key=lambda x: x.get("date_added", "")):
+                    age = days_old(r.get("date_added", ""))
+                    label, css = offcut_badge(age, db["offcut_warning_days"])
+                    c1, c2 = st.columns([5, 1])
+                    with c1:
+                        st.markdown(f"""<div class="card {css}">
+                        <div class="title">{r['material']}</div>
+                        <div class="meta">{r['width']}×{r['height']} mm · <b>{label}</b> · Added {r.get('date_added','-')}</div>
+                        </div>""", unsafe_allow_html=True)
+                    with c2:
+                        st.write("")
+                        if st.button("🗑️", key=f"delr_{r['id']}", width="stretch"):
+                            db["inventory"]["remnants"] = [x for x in db["inventory"]["remnants"] if x["id"] != r["id"]]
+                            save_db(db); st.rerun()
+            else: empty_state("✂️", "No offcuts.")
 
-# ═══════════════════════════════════════════════════════════════
-# MODULE — 📊 REPORTS
-# ═══════════════════════════════════════════════════════════════
-elif nav == "📊 Reports":
-    st.markdown("## 📊 Reports")
+    with tabs[2]:
+        hsec("📏 Aluminum Profiles")
+        if db["inventory"]["aluminum"]:
+            for k, v in db["inventory"]["aluminum"].items():
+                is_low = v <= db["low_stock_thresholds"]["aluminum_meters"]
+                css = "low" if is_low else "good"
+                badge = "🔴 Low" if is_low else "🟢 OK"
+                c1, c2 = st.columns([5, 1])
+                with c1:
+                    st.markdown(f"""<div class="card {css}">
+                    <div class="title">{badge} — {k}</div>
+                    <div class="meta"><b>{v:.2f} m</b> available</div>
+                    </div>""", unsafe_allow_html=True)
+                with c2:
+                    st.write("")
+                    if st.button("🗑️", key=f"dela_{k}", width="stretch"):
+                        st.session_state[f"confirm_del_a_{k}"] = True
+                if st.session_state.get(f"confirm_del_a_{k}"):
+                    st.warning(f"Delete **{k}** ({v:.2f}m)?")
+                    cc1, cc2 = st.columns(2)
+                    with cc1:
+                        if st.button("✅ Yes", key=f"yesa_{k}", type="primary", width="stretch"):
+                            del db["inventory"]["aluminum"][k]
+                            st.session_state[f"confirm_del_a_{k}"] = False
+                            save_db(db); st.rerun()
+                    with cc2:
+                        if st.button("❌ No", key=f"noa_{k}", width="stretch"):
+                            st.session_state[f"confirm_del_a_{k}"] = False; st.rerun()
+        else: empty_state("📏", "No aluminum.")
 
-    if not db["projects"]:
-        empty_state("📊", "No jobs yet.")
-        st.stop()
+    with tabs[3]:
+        hsec("🔧 Accessories")
+        if db["inventory"]["accessories"]:
+            for k, v in db["inventory"]["accessories"].items():
+                is_low = v <= db["low_stock_thresholds"]["accessories"]
+                css = "low" if is_low else "good"
+                badge = "🔴 Low" if is_low else "🟢 OK"
+                c1, c2 = st.columns([5, 1])
+                with c1:
+                    st.markdown(f"""<div class="card {css}">
+                    <div class="title">{badge} — {k}</div>
+                    <div class="meta"><b>{v}</b> pcs</div>
+                    </div>""", unsafe_allow_html=True)
+                with c2:
+                    st.write("")
+                    if st.button("🗑️", key=f"delacc_{k}", width="stretch"):
+                        st.session_state[f"confirm_del_acc_{k}"] = True
+                if st.session_state.get(f"confirm_del_acc_{k}"):
+                    st.warning(f"Delete **{k}** ({v} pcs)?")
+                    cc1, cc2 = st.columns(2)
+                    with cc1:
+                        if st.button("✅ Yes", key=f"yesacc_{k}", type="primary", width="stretch"):
+                            del db["inventory"]["accessories"][k]
+                            st.session_state[f"confirm_del_acc_{k}"] = False
+                            save_db(db); st.rerun()
+                    with cc2:
+                        if st.button("❌ No", key=f"noacc_{k}", width="stretch"):
+                            st.session_state[f"confirm_del_acc_{k}"] = False; st.rerun()
+        else: empty_state("🔧", "No accessories.")
 
-    if feat.get("customer_search", True):
-        section_title("🔍 Customer Search")
-        search = st.text_input("Search by customer, phone, or address",
-                                placeholder="e.g., Ahmed / 0911223344 / Bole")
-
-        filtered_projects = []
-        for name, p in db["projects"].items():
-            c = p.get("customer", {})
-            hay = f"{name} {c.get('name','')} {c.get('phone','')} {c.get('address','')}".lower()
-            if not search or search.lower() in hay:
-                filtered_projects.append((name, p))
-
-        if search:
-            st.caption(f"**{len(filtered_projects)}** job(s) match")
-
-        for name, p in filtered_projects:
-            c = p.get("customer", {})
-            status = p.get("status", "Started")
-            pill_class = {"Started": "status-started", "Ongoing": "status-ongoing",
-                          "Completed": "status-completed"}.get(status, "status-started")
-            st.markdown(f"""<div class="big-card">
-            <div style="display:flex; justify-content:space-between; align-items:start; gap:12px;">
-                <div style="flex:1;">
-                    <div class="title">🏗️ {name}</div>
-                    <div class="meta">👤 {c.get('name','—')} · 📞 {c.get('phone','—')} · 📍 {c.get('address','—')}<br>
-                    Glass: {len(p['glass'])} · Alum: {sum(a['Meters'] for a in p['aluminum']):.1f}m · Acc: {sum(a['Qty'] for a in p['accessories'])}</div>
-                </div>
-                <span class="status-pill {pill_class}">{status}</span>
-            </div>
-            </div>""", unsafe_allow_html=True)
+    with tabs[4]:
+        hsec("🪟 Add Glass")
+        with st.form("add_glass", clear_on_submit=True):
             c1, c2 = st.columns(2)
             with c1:
-                if st.button(f"📋 Open", key=f"open_{name}", width="stretch"):
-                    db["active_project"] = name
-                    save_db(db, silent=True)
-                    st.session_state.pending_nav = "🛠️ Jobs"
-                    st.rerun()
+                ch = st.selectbox("Material", ["-- New --"] + db["recent"]["materials"])
+                gm = st.text_input("New name", placeholder="e.g., 6mm Clear") if ch == "-- New --" else ch
             with c2:
-                if c.get("phone"):
-                    phone = c["phone"].replace(" ", "").replace("-", "")
-                    wa_text = quote(f"Hello {c.get('name','')}, regarding your project {name}...")
-                    st.link_button("📱 WhatsApp", f"https://wa.me/{phone}?text={wa_text}",
-                                    key=f"w_{name}", width="stretch")
+                gsz = st.selectbox("Sheet Size", ["2140 x 3300", "2140 x 3660"])
+                gq = st.number_input("Qty", min_value=1, step=1, value=1)
+            if st.form_submit_button("➕ Add Glass", type="primary", width="stretch"):
+                if not gm or not gm.strip(): st.error("Name required.")
+                else:
+                    gm = gm.strip()
+                    if gm not in db["inventory"]["glass"]:
+                        db["inventory"]["glass"][gm] = {"2140 x 3300": 0, "2140 x 3660": 0}
+                    db["inventory"]["glass"][gm][gsz] += gq
+                    remember_recent("materials", gm); save_db(db); st.rerun()
+
+        if feat.get("offcut_tracking", True):
+            hsec("✂️ Add Offcut")
+            if db["inventory"]["glass"]:
+                with st.form("add_rem", clear_on_submit=True):
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        rm = st.selectbox("Material", list(db["inventory"]["glass"].keys()))
+                        rw = st.number_input("Width", min_value=100, step=10, value=1000)
+                    with c2:
+                        rh = st.number_input("Height", min_value=100, step=10, value=1000)
+                    if st.form_submit_button("➕ Add Offcut", type="primary", width="stretch"):
+                        db["inventory"]["remnants"].append({"id": str(uuid.uuid4())[:8], "material": rm,
+                            "width": rw, "height": rh, "date_added": datetime.now().strftime("%Y-%m-%d")})
+                        save_db(db); st.rerun()
+
+        hsec("📏 Add Aluminum")
+        with st.form("add_alum", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                ch = st.selectbox("Profile", ["-- New --"] + db["recent"]["aluminum"])
+                apr = st.text_input("New profile", placeholder="e.g., 60mm Frame") if ch == "-- New --" else ch
+            with c2:
+                am = st.number_input("Meters", min_value=1.0, step=1.0, value=6.0)
+            if st.form_submit_button("➕ Add Aluminum", type="primary", width="stretch"):
+                if not apr or not apr.strip(): st.error("Name required.")
+                else:
+                    apr = apr.strip()
+                    db["inventory"]["aluminum"][apr] = db["inventory"]["aluminum"].get(apr, 0) + am
+                    remember_recent("aluminum", apr); save_db(db); st.rerun()
+
+        hsec("🔧 Add Accessory")
+        with st.form("add_acc", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                ch = st.selectbox("Item", ["-- New --"] + db["recent"]["accessories"])
+                ac = st.text_input("New item", placeholder="e.g., Door Handles") if ch == "-- New --" else ch
+            with c2:
+                aq = st.number_input("Qty", min_value=1, step=1, value=1)
+            if st.form_submit_button("➕ Add Accessory", type="primary", width="stretch"):
+                if not ac or not ac.strip(): st.error("Name required.")
+                else:
+                    ac = ac.strip()
+                    db["inventory"]["accessories"][ac] = db["inventory"]["accessories"].get(ac, 0) + aq
+                    remember_recent("accessories", ac); save_db(db); st.rerun()
+
+# ═══════════════════════════════════════════════════════════════
+# REPORTS
+# ═══════════════════════════════════════════════════════════════
+elif st.session_state.view == "reports":
+    c1, c2 = st.columns([1, 9])
+    with c1:
+        if st.button("←", key="back_rp"): goto("home"); st.rerun()
+    with c2:
+        st.markdown('<div class="topbar"><div class="title">📊 Reports</div></div>', unsafe_allow_html=True)
+
+    if not db["projects"]: empty_state("📊", "No jobs yet."); st.stop()
+
+    if feat.get("customer_search", True):
+        hsec("🔍 Search")
+        q = st.text_input("Search", placeholder="Customer, phone, address", label_visibility="collapsed")
+        matched = []
+        for n, p in db["projects"].items():
+            c = p.get("customer", {})
+            hay = f"{n} {c.get('name','')} {c.get('phone','')} {c.get('address','')}".lower()
+            if not q or q.lower() in hay: matched.append((n, p))
+        if q: st.caption(f"**{len(matched)}** match")
+        for n, p in matched[:20]:
+            c = p.get("customer", {})
+            s = p.get("status", "Started")
+            c1, c2 = st.columns([5, 2])
+            with c1:
+                st.markdown(f"""<div class="job-card"><div class="row">
+                    <div style="flex:1;"><div class="name">🏗️ {n}</div>
+                    <div class="sub">👤 {c.get('name','—')} · 📞 {c.get('phone','—')}</div></div>
+                    <span class="pill {status_pill_class(s)}">{s}</span>
+                </div></div>""", unsafe_allow_html=True)
+            with c2:
+                st.write("")
+                if st.button("Open →", key=f"ro_{n}", width="stretch"):
+                    goto("job", job=n); st.rerun()
 
     st.divider()
-    section_title("📁 All Jobs Overview")
-    overview = []
-    for name, p in db["projects"].items():
-        overview.append({
-            "Job": name,
-            "Customer": p.get("customer", {}).get("name", ""),
-            "Phone": p.get("customer", {}).get("phone", ""),
-            "Status": p.get("status", "Started"),
-            "Glass": len(p["glass"]),
-            "Alum m": round(sum(a["Meters"] for a in p["aluminum"]), 1),
-            "Acc": sum(a["Qty"] for a in p["accessories"]),
-        })
-    st.dataframe(pd.DataFrame(overview), width="stretch", hide_index=True)
-
-    st.divider()
-    section_title("📥 Export")
-    st.download_button("📥 Jobs (CSV)",
-                        pd.DataFrame(overview).to_csv(index=False).encode("utf-8"),
+    hsec("📁 All Jobs")
+    ov = []
+    for n, p in db["projects"].items():
+        ov.append({"Job": n, "Customer": p.get("customer", {}).get("name", ""),
+                   "Status": p.get("status", "Started"), "Glass": len(p["glass"]),
+                   "Alum m": round(sum(a["Meters"] for a in p["aluminum"]), 1),
+                   "Acc": sum(a["Qty"] for a in p["accessories"])})
+    st.dataframe(pd.DataFrame(ov), width="stretch", hide_index=True)
+    st.download_button("📥 Jobs CSV", pd.DataFrame(ov).to_csv(index=False).encode("utf-8"),
                         "jobs.csv", "text/csv", width="stretch")
 
-    inv_rows = []
-    for m, s in db["inventory"]["glass"].items():
-        for sz, q in s.items():
-            inv_rows.append({"Type": "Glass", "Name": m, "Detail": sz, "Qty": q})
-    for p, mm in db["inventory"]["aluminum"].items():
-        inv_rows.append({"Type": "Aluminum", "Name": p, "Detail": "m", "Qty": mm})
-    for i, q in db["inventory"]["accessories"].items():
-        inv_rows.append({"Type": "Accessory", "Name": i, "Detail": "pcs", "Qty": q})
-    st.download_button("📥 Inventory (CSV)",
-                        pd.DataFrame(inv_rows).to_csv(index=False).encode("utf-8"),
-                        "inventory.csv", "text/csv", width="stretch")
-
 # ═══════════════════════════════════════════════════════════════
-# MODULE — ⚙️ SETTINGS
+# SETTINGS
 # ═══════════════════════════════════════════════════════════════
-elif nav == "⚙️ Settings":
-    st.markdown("## ⚙️ Settings")
+elif st.session_state.view == "settings":
+    c1, c2 = st.columns([1, 9])
+    with c1:
+        if st.button("←", key="back_st"): goto("home"); st.rerun()
+    with c2:
+        st.markdown('<div class="topbar"><div class="title">⚙️ Settings</div></div>', unsafe_allow_html=True)
 
-    section_title("🎛️ Features")
+    hsec("🎛️ Features")
+    def feat_row(key, name, desc):
+        cur = feat.get(key, True)
+        c1, c2 = st.columns([4, 1])
+        with c1:
+            st.markdown(f'<div style="padding:8px 0;"><div style="font-weight:700;font-size:14.5px;color:#14344F;">{name}</div><div style="font-size:12.5px;color:#6B7280;">{desc}</div></div>', unsafe_allow_html=True)
+        with c2:
+            nv = st.toggle("Enable", value=cur, key=f"tog_{key}", label_visibility="collapsed")
+            if nv != cur:
+                db["features"][key] = nv; save_db(db, silent=True); st.rerun()
 
-    def feature_toggle(key, name, desc):
-        current = feat.get(key, True)
-        st.markdown(f"""<div class="feature-row">
-        <div class="info"><div class="name">{name}</div><div class="desc">{desc}</div></div>
-        </div>""", unsafe_allow_html=True)
-        new_val = st.toggle("Enable", value=current, key=f"tog_{key}", label_visibility="collapsed")
-        if new_val != current:
-            db["features"][key] = new_val
-            save_db(db, silent=True)
-            st.rerun()
-
-    feature_toggle("photos", "📷 Photo Attachments", "Take and store site photos per job")
-    feature_toggle("offcut_tracking", "✂️ Offcut Tracking", "Auto-use oldest offcuts first, save new offcuts")
-    feature_toggle("sharing", "📱 WhatsApp & Telegram Sharing", "Share cutting sheets and contact customers")
-    feature_toggle("low_stock_alerts", "🚨 Low Stock Alerts", "Warn when stock falls below thresholds")
-    feature_toggle("stale_offcut_alerts", "⏰ Stale Offcut Alerts", "Warn about offcuts older than threshold")
-    feature_toggle("print_mode", "🖨️ Print Mode", "Clean printable cutting sheets")
-    feature_toggle("customer_search", "🔍 Customer Search", "Search across all jobs by customer info")
-    feature_toggle("auto_save", "💾 Auto-Save to Cloud", "Save every action automatically to GitHub")
+    feat_row("photos", "📷 Photos", "Site photos per job")
+    feat_row("offcut_tracking", "✂️ Offcuts", "Reuse oldest offcuts first")
+    feat_row("sharing", "📱 WhatsApp & Telegram", "Share sheets")
+    feat_row("low_stock_alerts", "🚨 Low Stock Alerts", "Warn below thresholds")
+    feat_row("stale_offcut_alerts", "⏰ Stale Offcut Alerts", "Warn about old offcuts")
+    feat_row("print_mode", "🖨️ Print Mode", "Printable sheets")
+    feat_row("customer_search", "🔍 Customer Search", "Search all jobs")
+    feat_row("auto_save", "💾 Auto-Save", "Save to GitHub")
 
     st.divider()
-    section_title("📊 Thresholds")
-
-    st.markdown("**Low Stock Warnings**")
+    hsec("📊 Thresholds")
     c1, c2, c3 = st.columns(3)
-    with c1:
-        new_gs = st.number_input("Glass Sheets", min_value=0, max_value=100,
-                                  value=int(db["low_stock_thresholds"]["glass_sheets"]))
-    with c2:
-        new_am = st.number_input("Aluminum (m)", min_value=0.0, max_value=1000.0,
-                                  value=float(db["low_stock_thresholds"]["aluminum_meters"]),
-                                  step=1.0)
-    with c3:
-        new_ac = st.number_input("Accessories", min_value=0, max_value=1000,
-                                  value=int(db["low_stock_thresholds"]["accessories"]))
-
-    if (new_gs != db["low_stock_thresholds"]["glass_sheets"] or
-        new_am != db["low_stock_thresholds"]["aluminum_meters"] or
-        new_ac != db["low_stock_thresholds"]["accessories"]):
-        db["low_stock_thresholds"] = {
-            "glass_sheets": new_gs,
-            "aluminum_meters": new_am,
-            "accessories": new_ac,
-        }
+    with c1: ngs = st.number_input("Glass sheets", min_value=0, max_value=100, value=int(db["low_stock_thresholds"]["glass_sheets"]))
+    with c2: nam = st.number_input("Aluminum (m)", min_value=0.0, max_value=1000.0, value=float(db["low_stock_thresholds"]["aluminum_meters"]), step=1.0)
+    with c3: nac = st.number_input("Accessories", min_value=0, max_value=1000, value=int(db["low_stock_thresholds"]["accessories"]))
+    if ngs != db["low_stock_thresholds"]["glass_sheets"] or nam != db["low_stock_thresholds"]["aluminum_meters"] or nac != db["low_stock_thresholds"]["accessories"]:
+        db["low_stock_thresholds"] = {"glass_sheets": ngs, "aluminum_meters": nam, "accessories": nac}
         save_db(db, silent=True)
-
-    new_warn = st.number_input("⏰ Offcut warning (days)", min_value=7, max_value=365,
-                                value=int(db.get("offcut_warning_days", 60)), step=5)
-    if new_warn != db.get("offcut_warning_days", 60):
-        db["offcut_warning_days"] = new_warn
-        save_db(db, silent=True)
+    nw = st.number_input("⏰ Offcut warning (days)", min_value=7, max_value=365, value=int(db.get("offcut_warning_days", 60)), step=5)
+    if nw != db.get("offcut_warning_days", 60): db["offcut_warning_days"] = nw; save_db(db, silent=True)
 
     st.divider()
-    section_title("🔪 Cutting Defaults")
+    hsec("🔪 Cutting Defaults")
     c1, c2 = st.columns(2)
-    with c1:
-        new_kerf = st.number_input("Blade Kerf (mm)", min_value=1, max_value=20,
-                                    value=int(db["settings"].get("kerf", 3)))
-    with c2:
-        new_etrim = st.number_input("Edge Trim (mm)", min_value=0, max_value=50,
-                                     value=int(db["settings"].get("edge_trim", 5)))
-    if new_kerf != db["settings"]["kerf"] or new_etrim != db["settings"]["edge_trim"]:
-        db["settings"]["kerf"] = new_kerf
-        db["settings"]["edge_trim"] = new_etrim
-        save_db(db, silent=True)
+    with c1: nk = st.number_input("Blade Kerf (mm)", min_value=1, max_value=20, value=int(db["settings"].get("kerf", 3)))
+    with c2: ne = st.number_input("Edge Trim (mm)", min_value=0, max_value=50, value=int(db["settings"].get("edge_trim", 5)))
+    if nk != db["settings"]["kerf"] or ne != db["settings"]["edge_trim"]:
+        db["settings"]["kerf"] = nk; db["settings"]["edge_trim"] = ne; save_db(db, silent=True)
 
     st.divider()
-    section_title("💾 Data Management")
-
+    hsec("💾 Data")
     c1, c2 = st.columns(2)
     with c1:
-        st.download_button("📥 Download Backup", json.dumps(db, indent=4),
+        st.download_button("📥 Backup", json.dumps(db, indent=4),
                             f"abdiglass_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
                             "application/json", width="stretch")
     with c2:
-        if st.button("🔄 Reload from Cloud", width="stretch"):
-            get_github_client.clear()
-            st.session_state.db = load_db(); st.rerun()
+        if st.button("🔄 Reload Cloud", width="stretch"):
+            get_github_client.clear(); st.session_state.db = load_db(); st.rerun()
 
-    st.markdown("**Restore from Backup**")
-    up = st.file_uploader("Upload a backup file", type="json")
-    if up:
-        try:
-            new_db = migrate_db(json.load(up))
-            st.session_state.db = new_db
-            save_db(new_db)
-            st.success("Restored!"); st.rerun()
-        except Exception as e:
-            st.error(f"Invalid file: {e}")
+    with st.expander("📤 Restore"):
+        up = st.file_uploader("Upload backup", type="json")
+        if up:
+            try:
+                st.session_state.db = migrate_db(json.load(up)); save_db(st.session_state.db)
+                st.success("Restored!"); st.rerun()
+            except Exception as e: st.error(f"Invalid: {e}")
 
-    st.divider()
-    section_title("ℹ️ About")
-    st.markdown(f"""
-    **Abdiglass and ALM Shop ERP**  
-    Version 2.1 · {datetime.now().strftime('%Y')}  
-    Glass & Aluminum Fabrication Management System
-    """)
+    st.caption(f"**Abdiglass and ALM Shop ERP** · v3.2 · {datetime.now().strftime('%Y')}")
