@@ -8,7 +8,7 @@
     "inventory": {
         "glass": {
             "6mm Clear": {
-                "2140 x 3300": 5,
+                "2140 x 3300": 3,
                 "2140 x 3660": 0
             }
         },
@@ -464,7 +464,32 @@
                 "address": ""
             },
             "photos": [],
-            "glass": [],
+            "glass": [
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2650",
+                    "Location": "Door",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "905x860",
+                    "Location": "Dor2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "905x860",
+                    "Location": "Dor2",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "1070x2650",
+                    "Location": "Door",
+                    "Date": "2026-10-08"
+                }
+            ],
             "aluminum": [],
             "accessories": []
         }
