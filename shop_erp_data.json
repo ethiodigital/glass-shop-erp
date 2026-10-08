@@ -8,19 +8,11 @@
     "inventory": {
         "glass": {
             "6mm": {
-                "2140 x 3300": 2,
+                "2140 x 3300": 1,
                 "2140 x 3660": 5
             }
         },
-        "remnants": [
-            {
-                "id": "47884b26",
-                "material": "6mm",
-                "width": 2135,
-                "height": 2292,
-                "date_added": "2026-10-07"
-            }
-        ],
+        "remnants": [],
         "aluminum": {
             "Pp": 20.0
         },
@@ -113,7 +105,32 @@
                 "address": ""
             },
             "photos": [],
-            "glass": [],
+            "glass": [
+                {
+                    "Material": "6mm",
+                    "Size": "900x2140",
+                    "Location": "Unnamed",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "900x2140",
+                    "Location": "Unnamed",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "900x2140",
+                    "Location": "Unnamed",
+                    "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "900x2140",
+                    "Location": "Unnamed",
+                    "Date": "2026-10-08"
+                }
+            ],
             "aluminum": [],
             "accessories": []
         }
