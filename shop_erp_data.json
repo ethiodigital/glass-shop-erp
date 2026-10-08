@@ -10,6 +10,10 @@
             "6mm Clear": {
                 "2140 x 3300": 13,
                 "2140 x 3660": 0
+            },
+            "6mm": {
+                "2140 x 3300": 11,
+                "2140 x 3660": 0
             }
         },
         "remnants": [],
@@ -508,8 +512,8 @@
     },
     "recent": {
         "materials": [
-            "6mm Clear",
-            "6mm"
+            "6mm",
+            "6mm Clear"
         ],
         "aluminum": [
             "Pp"
