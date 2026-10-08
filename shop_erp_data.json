@@ -1,5 +1,5 @@
 {
-    "active_project": "Gerji",
+    "active_project": "Bole2",
     "low_stock_thresholds": {
         "glass_sheets": 3,
         "aluminum_meters": 20.0,
@@ -94,6 +94,19 @@
         "Gerji": {
             "status": "Started",
             "created": "2026-10-07",
+            "customer": {
+                "name": "",
+                "phone": "",
+                "address": ""
+            },
+            "photos": [],
+            "glass": [],
+            "aluminum": [],
+            "accessories": []
+        },
+        "Bole2": {
+            "status": "Started",
+            "created": "2026-10-08",
             "customer": {
                 "name": "",
                 "phone": "",
