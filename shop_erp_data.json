@@ -16,7 +16,15 @@
                 "2140 x 3660": 0
             }
         },
-        "remnants": [],
+        "remnants": [
+            {
+                "id": "98413e18",
+                "material": "6mm Clear",
+                "width": 2135,
+                "height": 442,
+                "date_added": "2026-10-08"
+            }
+        ],
         "aluminum": {
             "Pp": 20.0
         },
