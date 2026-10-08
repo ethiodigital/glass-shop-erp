@@ -349,7 +349,7 @@
     "offcut_warning_days": 60,
     "settings": {
         "kerf": 3,
-        "edge_trim": 4
+        "edge_trim": 2
     },
     "features": {
         "photos": true,
