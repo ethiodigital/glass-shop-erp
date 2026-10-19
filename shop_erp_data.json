@@ -12,7 +12,7 @@
                 "2140 x 3660": 0
             },
             "6mm": {
-                "2140 x 3300": 1,
+                "2140 x 3300": 0,
                 "2140 x 3660": 0
             }
         },
@@ -402,6 +402,36 @@
                     "Material": "6mm",
                     "Size": "950x800",
                     "Location": "Cut 17",
+                    "Date": "2026-10-19"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1375x1205",
+                    "Location": "Cut 8",
+                    "Date": "2026-10-19"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1165x1383",
+                    "Location": "Cut 9",
+                    "Date": "2026-10-19"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "895x1383",
+                    "Location": "Cut 6",
+                    "Date": "2026-10-19"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "1325x670",
+                    "Location": "Cut 2",
+                    "Date": "2026-10-19"
+                },
+                {
+                    "Material": "6mm",
+                    "Size": "695x930",
+                    "Location": "Cut 18",
                     "Date": "2026-10-19"
                 }
             ],
