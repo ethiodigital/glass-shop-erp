@@ -8,7 +8,7 @@
     "inventory": {
         "glass": {
             "6mm Clear": {
-                "2140 x 3300": 13,
+                "2140 x 3300": 12,
                 "2140 x 3660": 0
             },
             "6mm": {
@@ -277,6 +277,24 @@
                     "Size": "950x800",
                     "Location": "Cut 17",
                     "Date": "2026-10-08"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "2000x1010",
+                    "Location": "D1",
+                    "Date": "2026-10-19"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "2000x1010",
+                    "Location": "D1",
+                    "Date": "2026-10-19"
+                },
+                {
+                    "Material": "6mm Clear",
+                    "Size": "2000x1010",
+                    "Location": "D1",
+                    "Date": "2026-10-19"
                 }
             ],
             "aluminum": [],
