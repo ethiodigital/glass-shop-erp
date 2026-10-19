@@ -1391,4 +1391,4 @@ elif st.session_state.view == "settings":
                 st.success("Restored!"); st.rerun()
             except Exception as e: st.error(f"Invalid: {e}")
 
-    st.caption(f"**Abdiglass and ALM Shop ERP** · v3.3 · {datetime.now().strftime('%Y')}")
+    st.caption(f"**Abdiglass and ALM Shop ERP** · v3.3 · {datetime.now().strftime('%Y')}") 
