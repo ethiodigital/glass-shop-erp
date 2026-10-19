@@ -17,7 +17,7 @@ from github import Github, GithubException, Auth
 st.set_page_config(page_title="Abdiglass and ALM Shop ERP", layout="wide", page_icon="🏭", initial_sidebar_state="collapsed")
 
 # ═══════════════════════════════════════════════════════════════
-# STYLES
+# GLOBAL STYLES
 # ═══════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -74,7 +74,7 @@ input, textarea, select { font-size: 16px !important; min-height: 50px !importan
 """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
-# DATABASE
+# DATABASE SETUP
 # ═══════════════════════════════════════════════════════════════
 DB_FILE_PATH = "shop_erp_data.json"
 
@@ -165,7 +165,7 @@ db = st.session_state.db
 feat = db.get("features", {})
 
 # ═══════════════════════════════════════════════════════════════
-# NAVIGATION
+# NAVIGATION STATE
 # ═══════════════════════════════════════════════════════════════
 if "view" not in st.session_state: st.session_state.view = "home"
 if "active_job" not in st.session_state: st.session_state.active_job = None
@@ -227,7 +227,7 @@ def compress_image(uploaded_file, max_w=1000, quality=65):
     except Exception: return None
 
 # ═══════════════════════════════════════════════════════════════
-# CUT SEQUENCE ENGINE
+# PRECISION CUT SEQUENCE ENGINE & BLUEPRINT PLOTTER
 # ═══════════════════════════════════════════════════════════════
 def generate_cut_sequence(abin, kerf):
     """Derive guillotine cut sequence: verticals first, then horizontals per strip."""
@@ -262,7 +262,7 @@ def generate_cut_sequence(abin, kerf):
         cuts.append({
             "order": order, "type": "V", "label": f"V{v_count}",
             "position": vp,
-            "desc": f"Vertical cut at X = {vp} mm  (from bottom edge to top edge)",
+            "desc": f"Vertical cut at X = {int(vp)} mm (from bottom edge to top edge)",
         })
     h_count = 0
     for x_start, x_end, y_positions in strip_info:
@@ -272,162 +272,119 @@ def generate_cut_sequence(abin, kerf):
             cuts.append({
                 "order": order, "type": "H", "label": f"H{h_count}",
                 "position": yp, "strip": (int(x_start), int(x_end)),
-                "desc": f"Horizontal cut at Y = {yp} mm  (in strip {int(x_start)}–{int(x_end)} mm)",
+                "desc": f"Horizontal cut at Y = {int(yp)} mm (in strip {int(x_start)}–{int(x_end)} mm)",
             })
 
     return numbered_pieces, cuts, v_sorted, strip_info
 
 
-# ═══════════════════════════════════════════════════════════════
-# SHEET DIAGRAM (with cut sequence)
-# ═══════════════════════════════════════════════════════════════
 def _build_sheet_figure(abin, kerf, title_prefix="Sheet", job_name=""):
     numbered, cuts, v_sorted, strip_info = generate_cut_sequence(abin, kerf)
 
-    fig = plt.figure(figsize=(15, 13), dpi=120)
+    fig = plt.figure(figsize=(14, 11), dpi=130)
 
     total_area = abin.width * abin.height
     used = sum((r.width - kerf) * (r.height - kerf) for r in abin)
     waste = ((total_area - used) / total_area) * 100
 
-    fig.text(0.5, 0.985, f"✂️ {title_prefix}  —  {job_name}",
-             ha="center", va="top", fontsize=17, weight="bold", color="#14344F")
-    fig.text(0.5, 0.955,
-             f"Sheet size: {int(abin.width)} × {int(abin.height)} mm   ·   "
-             f"{len(abin)} pieces   ·   Waste: {waste:.1f}%   ·   "
-             f"Kerf: {kerf} mm   ·   Total cuts: {len(cuts)}",
+    fig.text(0.5, 0.97, f"✂️ {title_prefix} — {job_name}",
+             ha="center", va="top", fontsize=18, weight="bold", color="#14344F")
+    fig.text(0.5, 0.94,
+             f"Sheet: {int(abin.width)} × {int(abin.height)} mm  |  "
+             f"Pieces: {len(abin)}  |  Waste: {waste:.1f}%  |  Kerf: {kerf} mm",
              ha="center", va="top", fontsize=11, color="#444")
 
-    ax = fig.add_axes([0.09, 0.28, 0.86, 0.65])
-    ax.set_xlim(-280, abin.width + 280)
-    ax.set_ylim(-280, abin.height + 280)
-    ax.set_aspect("equal")
-    ax.axis("off")
+    ax = fig.add_axes([0.10, 0.28, 0.80, 0.62])
+    margin = 250
+    ax.set_xlim(-margin, abin.width + margin)
+    ax.set_ylim(-margin, abin.height + margin)
+    ax.set_aspect('equal', adjustable='box')
+    ax.axis('off')
 
     ax.add_patch(patches.Rectangle((0, 0), abin.width, abin.height,
-                                    facecolor="#FAFBFC", edgecolor="black", linewidth=3))
+                                    facecolor="#F8F9FA", edgecolor="black", linewidth=3, zorder=1))
 
     step = 100
     label_step = 500
     for x in range(0, int(abin.width) + 1, step):
         is_major = (x % label_step == 0)
-        tick = 70 if is_major else 32
-        ax.plot([x, x], [abin.height, abin.height + tick],
-                color="#222" if is_major else "#999", linewidth=1.6 if is_major else 0.8)
-        ax.plot([x, x], [0, -tick],
-                color="#222" if is_major else "#999", linewidth=1.6 if is_major else 0.8)
+        tick_len = 60 if is_major else 30
+        ax.plot([x, x], [abin.height, abin.height + tick_len], color="black" if is_major else "#888", lw=1.5 if is_major else 0.8, zorder=4)
+        ax.plot([x, x], [0, -tick_len], color="black" if is_major else "#888", lw=1.5 if is_major else 0.8, zorder=4)
         if is_major:
-            ax.text(x, abin.height + tick + 22, str(x), ha="center", va="bottom",
-                    fontsize=10, weight="bold", color="#222")
-            ax.text(x, -tick - 22, str(x), ha="center", va="top",
-                    fontsize=10, weight="bold", color="#222")
+            ax.text(x, abin.height + tick_len + 15, str(x), ha="center", va="bottom", fontsize=9, weight="bold")
+            ax.text(x, -tick_len - 15, str(x), ha="center", va="top", fontsize=9, weight="bold")
 
     for y in range(0, int(abin.height) + 1, step):
         is_major = (y % label_step == 0)
-        tick = 70 if is_major else 32
-        ax.plot([0, -tick], [y, y],
-                color="#222" if is_major else "#999", linewidth=1.6 if is_major else 0.8)
-        ax.plot([abin.width, abin.width + tick], [y, y],
-                color="#222" if is_major else "#999", linewidth=1.6 if is_major else 0.8)
+        tick_len = 60 if is_major else 30
+        ax.plot([0, -tick_len], [y, y], color="black" if is_major else "#888", lw=1.5 if is_major else 0.8, zorder=4)
+        ax.plot([abin.width, abin.width + tick_len], [y, y], color="black" if is_major else "#888", lw=1.5 if is_major else 0.8, zorder=4)
         if is_major:
-            ax.text(-tick - 22, y, str(y), ha="right", va="center",
-                    fontsize=10, weight="bold", color="#222")
-            ax.text(abin.width + tick + 22, y, str(y), ha="left", va="center",
-                    fontsize=10, weight="bold", color="#222")
+            ax.text(-tick_len - 15, y, str(y), ha="right", va="center", fontsize=9, weight="bold")
+            ax.text(abin.width + tick_len + 15, y, str(y), ha="left", va="center", fontsize=9, weight="bold")
 
     for i, vp in enumerate(v_sorted, start=1):
-        ax.plot([vp, vp], [0, abin.height],
-                color="#E74C3C", linestyle="--", linewidth=2.2, alpha=0.85, zorder=2)
-        ax.text(vp, abin.height + 130, f"V{i}", ha="center", va="bottom",
-                fontsize=13, weight="bold", color="white",
-                bbox=dict(boxstyle="circle,pad=0.42", fc="#E74C3C",
-                          ec="white", linewidth=2), zorder=8)
-        ax.text(vp, -130, f"V{i}", ha="center", va="top",
-                fontsize=13, weight="bold", color="white",
-                bbox=dict(boxstyle="circle,pad=0.42", fc="#E74C3C",
-                          ec="white", linewidth=2), zorder=8)
+        ax.plot([vp, vp], [0, abin.height], color="#E74C3C", linestyle="--", linewidth=2.5, zorder=2)
+        ax.text(vp, abin.height + 130, f"V{i}", ha="center", va="bottom", fontsize=12, weight="bold", color="white",
+                bbox=dict(boxstyle="circle,pad=0.4", fc="#E74C3C", ec="none"), zorder=6)
+        ax.text(vp, -130, f"V{i}", ha="center", va="top", fontsize=12, weight="bold", color="white",
+                bbox=dict(boxstyle="circle,pad=0.4", fc="#E74C3C", ec="none"), zorder=6)
 
     h_counter = 0
     for x_start, x_end, y_positions in strip_info:
         for yp in y_positions:
             h_counter += 1
-            ax.plot([x_start, x_end], [yp, yp],
-                    color="#F39C12", linestyle="--", linewidth=2.2, alpha=0.85, zorder=2)
+            ax.plot([x_start, x_end], [yp, yp], color="#F39C12", linestyle="--", linewidth=2.5, zorder=2)
             mid_x = (x_start + x_end) / 2
-            ax.text(mid_x, yp + 20, f"H{h_counter}", ha="center", va="bottom",
-                    fontsize=12, weight="bold", color="white",
-                    bbox=dict(boxstyle="circle,pad=0.38", fc="#F39C12",
-                              ec="white", linewidth=1.8), zorder=8)
+            ax.text(mid_x, yp + 25, f"H{h_counter}", ha="center", va="bottom", fontsize=11, weight="bold", color="white",
+                    bbox=dict(boxstyle="circle,pad=0.35", fc="#F39C12", ec="none"), zorder=6)
 
     for idx, rect in numbered:
         pw = rect.width - kerf
         ph = rect.height - kerf
-
         ax.add_patch(patches.Rectangle((rect.x, rect.y), pw, ph,
-                                        facecolor="#D6EAF8", edgecolor="#1F4E79",
-                                        linewidth=2.2, zorder=3))
-
-        badge_r = 48
-        bx = rect.x + badge_r + 8
-        by = rect.y + ph - badge_r - 8
-        ax.add_patch(patches.Circle((bx, by), radius=badge_r, facecolor="#1F4E79",
-                                     edgecolor="white", linewidth=2.8, zorder=5))
-        ax.text(bx, by, str(idx), ha="center", va="center",
-                fontsize=20, color="white", weight="bold", zorder=6)
+                                        facecolor="#D6EAF8", edgecolor="#1F4E79", linewidth=1.5, zorder=3))
+        
+        badge_r = min(45, min(pw, ph)/4)
+        bx = rect.x + badge_r + 5
+        by = rect.y + ph - badge_r - 5
+        ax.add_patch(patches.Circle((bx, by), radius=badge_r, facecolor="#1F4E79", edgecolor="white", lw=1.5, zorder=5))
+        ax.text(bx, by, str(idx), ha="center", va="center", fontsize=16, color="white", weight="bold", zorder=6)
 
         cx, cy = rect.x + pw / 2, rect.y + ph / 2
         w_int, h_int = int(pw), int(ph)
-
-        if pw > 420 and ph > 260:
-            ax.text(cx, cy + 20, f"{w_int} × {h_int}", ha="center", va="center",
-                    fontsize=13, weight="bold", color="#14344F", zorder=4)
-            ax.text(cx, cy - 15, "mm", ha="center", va="center",
-                    fontsize=9, color="#666", zorder=4)
+        
+        if pw > 250 and ph > 200:
+            ax.text(cx, cy + 15, f"{w_int} × {h_int}", ha="center", va="center", fontsize=12, weight="bold", color="#14344F", zorder=4)
+            ax.text(cx, cy - 15, f"mm", ha="center", va="center", fontsize=9, color="#555", zorder=4)
             if rect.rid and rect.rid != "Unnamed":
-                ax.text(cx, cy - 45, f"📍 {rect.rid[:22]}", ha="center", va="center",
-                        fontsize=8.5, color="#555", style="italic", zorder=4)
-        elif pw > 260 and ph > 150:
-            ax.text(cx, cy + 8, f"{w_int} × {h_int}", ha="center", va="center",
-                    fontsize=10.5, weight="bold", color="#14344F", zorder=4)
-            if rect.rid and rect.rid != "Unnamed":
-                ax.text(cx, cy - 22, rect.rid[:16], ha="center", va="center",
-                        fontsize=7.5, color="#555", style="italic", zorder=4)
-        else:
-            ax.text(cx, cy, f"{w_int}×{h_int}", ha="center", va="center",
-                    fontsize=8, weight="bold", color="#14344F", zorder=4)
+                ax.text(cx, cy - 40, f"📍 {rect.rid[:20]}", ha="center", va="center", fontsize=8, color="#444", style="italic", zorder=4)
+        elif pw > 120 and ph > 80:
+            ax.text(cx, cy, f"{w_int}×{h_int}", ha="center", va="center", fontsize=8.5, weight="bold", color="#14344F", zorder=4)
 
-    # ---- Cut Sequence List (below) ----
-    ax2 = fig.add_axes([0.04, 0.01, 0.92, 0.24])
+    ax2 = fig.add_axes([0.05, 0.02, 0.90, 0.22])
     ax2.axis("off")
     ax2.set_xlim(0, 1)
     ax2.set_ylim(0, 1)
 
-    ax2.text(0.5, 0.985, "✂️  CUT SEQUENCE  —  Follow top → bottom, left → right",
-             ha="center", va="top", fontsize=13.5, weight="bold", color="#14344F")
-
-    ax2.text(0.02, 0.90, "●", color="#E74C3C", fontsize=14, va="center")
-    ax2.text(0.035, 0.90, "Vertical cut (V) — full height", fontsize=9.5, va="center", color="#444")
-    ax2.text(0.35, 0.90, "●", color="#F39C12", fontsize=14, va="center")
-    ax2.text(0.365, 0.90, "Horizontal cut (H) — within strip", fontsize=9.5, va="center", color="#444")
+    ax2.text(0.5, 0.95, "✂️ CUT SEQUENCE", ha="center", va="top", fontsize=14, weight="bold", color="#14344F")
+    ax2.text(0.5, 0.88, "Follow left to right, top to bottom", ha="center", va="top", fontsize=9, color="#666")
 
     half = (len(cuts) + 1) // 2
-    line_h = 0.075 if len(cuts) <= 20 else 0.055 if len(cuts) <= 30 else 0.04
+    line_h = 0.08 if len(cuts) <= 20 else 0.05 if len(cuts) <= 30 else 0.04
 
     for col_idx, start_idx in enumerate([0, half]):
-        col_x = 0.02 + col_idx * 0.5
+        col_x = 0.05 + col_idx * 0.50
         end_idx = min(start_idx + half, len(cuts))
         for i in range(start_idx, end_idx):
             cut = cuts[i]
-            y_pos = 0.80 - (i - start_idx) * line_h
+            y_pos = 0.78 - (i - start_idx) * line_h
             color = "#E74C3C" if cut["type"] == "V" else "#F39C12"
 
-            ax2.text(col_x, y_pos, f"{cut['order']:>2}.",
-                     ha="left", va="center", fontsize=11, weight="bold", color=color,
-                     family="monospace")
-            ax2.text(col_x + 0.035, y_pos, cut["label"],
-                     ha="left", va="center", fontsize=11, weight="bold", color=color)
-            ax2.text(col_x + 0.085, y_pos, cut["desc"],
-                     ha="left", va="center", fontsize=10, color="#222")
+            ax2.text(col_x, y_pos, f"{cut['order']:>2}.", ha="left", va="center", fontsize=11, weight="bold", color=color)
+            ax2.text(col_x + 0.04, y_pos, cut["label"], ha="left", va="center", fontsize=11, weight="bold", color=color)
+            ax2.text(col_x + 0.10, y_pos, cut["desc"], ha="left", va="center", fontsize=10, color="#222")
 
     return fig
 
@@ -440,78 +397,56 @@ def render_sheet_png(abin, kerf, title_prefix="Sheet", job_name=""):
     return buf.getvalue()
 
 
-# ═══════════════════════════════════════════════════════════════
-# COVER PAGE
-# ═══════════════════════════════════════════════════════════════
 def _build_cover_page(bins, kerf, job_name):
     fig = plt.figure(figsize=(14, 10), dpi=130)
-    fig.text(0.5, 0.965, "🏭  Abdiglass and ALM Shop", ha="center", va="top",
-             fontsize=15, weight="bold", color="#2E75B6")
-    fig.text(0.5, 0.935, "CUTTING PLAN", ha="center", va="top",
-             fontsize=26, weight="bold", color="#14344F")
-    fig.text(0.5, 0.885, f"Job: {job_name}", ha="center", va="top",
-             fontsize=15, color="#333")
-    fig.text(0.5, 0.855, f"Generated: {datetime.now().strftime('%Y-%m-%d  %H:%M')}",
-             ha="center", va="top", fontsize=10, color="#666")
+    fig.text(0.5, 0.95, "🏭 Abdiglass and ALM Shop", ha="center", va="top", fontsize=14, weight="bold", color="#2E75B6")
+    fig.text(0.5, 0.91, "CUTTING PLAN", ha="center", va="top", fontsize=26, weight="bold", color="#14344F")
+    fig.text(0.5, 0.86, f"Job: {job_name}", ha="center", va="top", fontsize=15, color="#333")
+    fig.text(0.5, 0.83, f"Generated: {datetime.now().strftime('%Y-%m-%d  %H:%M')}", ha="center", va="top", fontsize=10, color="#666")
 
     total_pieces = sum(len(b) for b in bins)
     total_sheets = len(bins)
     total_area = sum(b.width * b.height for b in bins)
-    used = 0
-    for b in bins:
-        used += sum((r.width - kerf) * (r.height - kerf) for r in b)
+    used = sum(sum((r.width - kerf) * (r.height - kerf) for r in b) for b in bins)
     waste = ((total_area - used) / total_area * 100) if total_area else 0
 
-    fig.text(0.5, 0.80,
-             f"📄 {total_sheets} sheets   ·   🔢 {total_pieces} pieces   ·   "
-             f"♻️ {waste:.1f}% waste   ·   🔪 kerf {kerf} mm",
+    fig.text(0.5, 0.78, f"📄 {total_sheets} sheets  ·  🔢 {total_pieces} pieces  ·  ♻️ {waste:.1f}% waste",
              ha="center", va="top", fontsize=13, weight="bold", color="#14344F")
 
-    fig.text(0.5, 0.74, "PIECE INDEX", ha="center", va="top",
-             fontsize=12, weight="bold", color="#2E75B6")
+    fig.text(0.5, 0.72, "PIECE INDEX", ha="center", va="top", fontsize=12, weight="bold", color="#2E75B6")
 
     rows = []
     for sheet_idx, abin in enumerate(bins, start=1):
         numbered, cuts, _, _ = generate_cut_sequence(abin, kerf)
         for piece_idx, rect in numbered:
             rows.append({
-                "Sheet": sheet_idx,
-                "Piece #": piece_idx,
-                "Location": (rect.rid or "Unnamed")[:24],
+                "Sheet": sheet_idx, "Piece #": piece_idx,
+                "Location": (rect.rid or "Unnamed")[:20],
                 "Size (W × H mm)": f"{int(rect.width - kerf)} × {int(rect.height - kerf)}",
                 "Position (X, Y mm)": f"({int(rect.x)}, {int(rect.y)})",
             })
 
     if rows:
-        df = pd.DataFrame(rows)
-        display_df = df.head(40)
-        ax = fig.add_axes([0.05, 0.10, 0.90, 0.60])
+        df = pd.DataFrame(rows).head(40)
+        ax = fig.add_axes([0.05, 0.10, 0.90, 0.58])
         ax.axis("off")
-        table = ax.table(cellText=display_df.values,
-                          colLabels=display_df.columns,
-                          cellLoc="center", loc="upper center",
+        table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc="center", loc="upper center",
                           colWidths=[0.09, 0.10, 0.28, 0.20, 0.20])
         table.auto_set_font_size(False)
         table.set_fontsize(9.5)
         table.scale(1, 1.6)
         for i, cell in enumerate(table._cells.values()):
             cell.set_edgecolor("#D0D7DE")
-            if i < len(display_df.columns):
+            if i < len(df.columns):
                 cell.set_facecolor("#2E75B6")
                 cell.set_text_props(color="white", weight="bold")
-        if len(df) > 40:
-            fig.text(0.5, 0.06, f"...and {len(df) - 40} more (see individual sheet pages)",
-                     ha="center", fontsize=9, color="#888", style="italic")
 
-    fig.text(0.5, 0.02,
-             "Print all pages  ·  Each sheet has its own cut sequence (V=vertical, H=horizontal)",
+    fig.text(0.5, 0.02, "Print all pages · Each sheet has its own cut sequence (V=vertical, H=horizontal)",
              ha="center", fontsize=9, color="#666", style="italic")
-
     return fig
 
 
 def render_all_sheets_pdf(bins, kerf, job_name):
-    """Generate ONE PDF: cover page + one page per sheet. Returns (pdf_bytes, stats)."""
     buf = io.BytesIO()
     total_pieces = 0
     total_waste_area = 0
@@ -532,19 +467,11 @@ def render_all_sheets_pdf(bins, kerf, job_name):
             total_waste_area += (abin.width * abin.height) - used
             total_sheet_area += abin.width * abin.height
 
-        d = pdf.infodict()
-        d["Title"] = f"{job_name} — Cutting Plan"
-        d["Author"] = "Abdiglass and ALM Shop ERP"
-        d["Subject"] = f"{len(bins)} sheet(s) · {total_pieces} pieces"
-        d["Keywords"] = "cutting plan glass fabrication guillotine"
-
     buf.seek(0)
     avg_waste = (total_waste_area / total_sheet_area * 100) if total_sheet_area else 0
     return buf.getvalue(), {
-        "sheets": len(bins),
-        "pieces": total_pieces,
-        "avg_waste": avg_waste,
-        "total_area_m2": total_sheet_area / 1_000_000,
+        "sheets": len(bins), "pieces": total_pieces,
+        "avg_waste": avg_waste, "total_area_m2": total_sheet_area / 1_000_000,
     }
 
 
@@ -552,10 +479,6 @@ def render_all_sheets_pdf(bins, kerf, job_name):
 # BULK PASTE PARSER
 # ═══════════════════════════════════════════════════════════════
 def parse_bulk_text(text, available_materials, default_material=None):
-    """Parse bulk input. Two formats:
-       - 5 values: Location, Material, Width, Height, Qty
-       - 4 values: Location, Width, Height, Qty  (uses default_material)
-    """
     rows, errors = [], []
     for i, line in enumerate(text.strip().splitlines(), start=1):
         line = line.strip()
@@ -581,7 +504,6 @@ def parse_bulk_text(text, available_materials, default_material=None):
             except ValueError:
                 errors.append(f"Line {i}: numbers invalid")
                 continue
-
         else:
             errors.append(f"Line {i}: need 4 or 5 values")
             continue
@@ -595,7 +517,6 @@ def parse_bulk_text(text, available_materials, default_material=None):
         rows.append({"Location": loc or "Unnamed", "Material": mat,
                      "Width": w, "Height": h, "Quantity": q})
     return rows, errors
-
 
 def empty_state(icon, msg):
     st.markdown(f'<div class="empty"><div class="icon">{icon}</div><div class="msg">{msg}</div></div>',
@@ -1391,4 +1312,4 @@ elif st.session_state.view == "settings":
                 st.success("Restored!"); st.rerun()
             except Exception as e: st.error(f"Invalid: {e}")
 
-    st.caption(f"**Abdiglass and ALM Shop ERP** · v3.3 · {datetime.now().strftime('%Y')}") 
+    st.caption(f"**Abdiglass and ALM Shop ERP** · v3.4 · {datetime.now().strftime('%Y')}")
